@@ -42,6 +42,7 @@ public static class NativeMethods
     }
 
     public const uint SPI_SETWORKAREA = 0x002F;
+    public const uint SPI_GETWORKAREA = 0x0030;
     public const uint SPIF_SENDCHANGE = 0x0002;
 
     [DllImport("user32.dll")]

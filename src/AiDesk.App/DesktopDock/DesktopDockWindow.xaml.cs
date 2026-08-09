@@ -23,13 +23,12 @@ public partial class DesktopDockWindow : Window
     {
         InitializeComponent();
 
-        // 位置：底部贴底居中（SPI_SETWORKAREA 已预留底部区域，应用最大化不会覆盖）
-        var screenH = NativeMethods.GetSystemMetrics(1); // SM_CYSCREEN
-        Top = screenH - 108;
+        // 位置：底部贴底居中（DIP 单位；SPI_SETWORKAREA 已预留底部，应用最大化不会覆盖）
+        Top = SystemParameters.PrimaryScreenHeight - 108;
         SizeChanged += (_, _) =>
         {
             if (ActualWidth > 0)
-                Left = (NativeMethods.GetSystemMetrics(0) - ActualWidth) / 2;
+                Left = (SystemParameters.PrimaryScreenWidth - ActualWidth) / 2;
         };
 
         SourceInitialized += OnSourceInitialized;

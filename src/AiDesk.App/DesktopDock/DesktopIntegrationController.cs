@@ -27,8 +27,11 @@ public sealed class DesktopIntegrationController
     private DesktopDockWindow? _dock;
     private AppSettings _settings;
 
-    /// <summary>Dock 预留的底部工作区高度（Dock 高 108 + 边距）。</summary>
+    /// <summary>Dock 预留的底部工作区高度（物理像素；Dock 高 108 DIP + 边距）。</summary>
     private const int DockReserveHeight = 116;
+
+    private bool _workAreaReserved;
+    private NativeMethods.RECT _originalWorkArea;
 
     private DesktopIntegrationController()
     {
@@ -59,20 +62,31 @@ public sealed class DesktopIntegrationController
         SetIconsHidden(_settings.Dock.HideIcons);
     }
 
-    /// <summary>预留/恢复底部工作区（SPI_SETWORKAREA）。隐藏任务栏时原工作区=全屏，可安全预留。</summary>
+    /// <summary>预留/恢复底部工作区（SPI_SETWORKAREA）。只在曾预留过时恢复原始值，避免覆盖任务栏区域。</summary>
     private void ReserveDockArea(bool reserve)
     {
         try
         {
-            var rect = new NativeMethods.RECT
+            if (reserve && !_workAreaReserved)
             {
-                Right = NativeMethods.GetSystemMetrics(0), // SM_CXSCREEN
-                Bottom = reserve
-                    ? NativeMethods.GetSystemMetrics(1) - DockReserveHeight // SM_CYSCREEN
-                    : NativeMethods.GetSystemMetrics(1),
-            };
-            NativeMethods.SystemParametersInfo(
-                NativeMethods.SPI_SETWORKAREA, 0, ref rect, NativeMethods.SPIF_SENDCHANGE);
+                // 保存原始工作区，恢复时还原
+                NativeMethods.SystemParametersInfo(
+                    NativeMethods.SPI_GETWORKAREA, 0, ref _originalWorkArea, 0);
+                var rect = new NativeMethods.RECT
+                {
+                    Right = NativeMethods.GetSystemMetrics(0), // SM_CXSCREEN（物理像素）
+                    Bottom = NativeMethods.GetSystemMetrics(1) - DockReserveHeight,
+                };
+                NativeMethods.SystemParametersInfo(
+                    NativeMethods.SPI_SETWORKAREA, 0, ref rect, NativeMethods.SPIF_SENDCHANGE);
+                _workAreaReserved = true;
+            }
+            else if (!reserve && _workAreaReserved)
+            {
+                NativeMethods.SystemParametersInfo(
+                    NativeMethods.SPI_SETWORKAREA, 0, ref _originalWorkArea, NativeMethods.SPIF_SENDCHANGE);
+                _workAreaReserved = false;
+            }
         }
         catch (Exception ex)
         {
