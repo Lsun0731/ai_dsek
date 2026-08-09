@@ -11,7 +11,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
 {
     private readonly IReadOnlyList<StartMenuApp> _startMenuApps;
 
-    public SearchWidgetWindow() : base(Services.WidgetKind.Search)
+    public SearchWidgetWindow() : base(Services.WidgetKind.Search, topmost: true)
     {
         InitializeComponent();
         _startMenuApps = StartMenuAppsProvider.Scan();

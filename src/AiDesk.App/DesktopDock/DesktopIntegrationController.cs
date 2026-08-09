@@ -27,6 +27,9 @@ public sealed class DesktopIntegrationController
     private DesktopDockWindow? _dock;
     private AppSettings _settings;
 
+    /// <summary>Dock 预留的底部工作区高度（Dock 高 108 + 边距）。</summary>
+    private const int DockReserveHeight = 116;
+
     private DesktopIntegrationController()
     {
         _settings = AppConfig.Load();
@@ -34,7 +37,7 @@ public sealed class DesktopIntegrationController
 
     public AppSettings Settings => _settings;
 
-    /// <summary>按当前配置应用：创建/销毁 Dock + 任务栏/图标隐藏状态。</summary>
+    /// <summary>按当前配置应用：创建/销毁 Dock + 任务栏/图标隐藏状态 + 工作区预留。</summary>
     public void ApplySettings()
     {
         if (_settings.Dock.Enabled && _dock is null)
@@ -49,8 +52,32 @@ public sealed class DesktopIntegrationController
             _dock = null;
         }
 
+        // 工作区预留：Dock 启用且隐藏任务栏时，把工作区底部让给 Dock（应用最大化不覆盖 Dock，Dock 也不挡应用）
+        ReserveDockArea(_settings.Dock.Enabled && _settings.Dock.HideTaskbar);
+
         SetTaskbarHidden(_settings.Dock.HideTaskbar);
         SetIconsHidden(_settings.Dock.HideIcons);
+    }
+
+    /// <summary>预留/恢复底部工作区（SPI_SETWORKAREA）。隐藏任务栏时原工作区=全屏，可安全预留。</summary>
+    private void ReserveDockArea(bool reserve)
+    {
+        try
+        {
+            var rect = new NativeMethods.RECT
+            {
+                Right = NativeMethods.GetSystemMetrics(0), // SM_CXSCREEN
+                Bottom = reserve
+                    ? NativeMethods.GetSystemMetrics(1) - DockReserveHeight // SM_CYSCREEN
+                    : NativeMethods.GetSystemMetrics(1),
+            };
+            NativeMethods.SystemParametersInfo(
+                NativeMethods.SPI_SETWORKAREA, 0, ref rect, NativeMethods.SPIF_SENDCHANGE);
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Dock.WorkArea", ex);
+        }
     }
 
     /// <summary>保存设置并立即应用。</summary>
@@ -87,11 +114,12 @@ public sealed class DesktopIntegrationController
         }
     }
 
-    /// <summary>应用退出时恢复系统 UI（explorer 独立进程，隐藏状态会残留）。</summary>
+    /// <summary>应用退出时恢复系统 UI（explorer 独立进程，隐藏状态/工作区会残留）。</summary>
     public void Cleanup()
     {
         try { _taskbar.Restore(); } catch { }
         try { _icons.Restore(); } catch { }
+        ReserveDockArea(false);
         _dock?.Close();
     }
 }

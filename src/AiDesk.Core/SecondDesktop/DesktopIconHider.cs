@@ -17,6 +17,13 @@ public sealed class DesktopIconHider
     [System.Runtime.InteropServices.DllImport("shell32.dll")]
     private static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
+    // SPI_SETICONS：强制刷新桌面图标（注册表 HideIcons 改动后必须调用才生效）
+    private const uint SPI_SETICONS = 0x003A;
+    private const uint SPIF_SENDCHANGE = 0x0002;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
     /// <summary>当前注册表中的 HideIcons 状态（null = 键不存在，等同 0）。</summary>
     public bool? GetHideIconsState()
     {
@@ -48,7 +55,8 @@ public sealed class DesktopIconHider
     {
         using var key = Registry.CurrentUser.CreateSubKey(ExplorerAdvancedPath);
         key.SetValue(HideIconsValue, hide ? 1 : 0, RegistryValueKind.DWord);
-        // 广播刷新，让资源管理器立即应用（SHCNE_ASSOCCHANGED 对 HideIcons 生效）
+        // SPI_SETICONS 强制刷新桌面图标（仅 SHChangeNotify 在部分 Win11 上不生效）
+        SystemParametersInfo(SPI_SETICONS, 0, IntPtr.Zero, SPIF_SENDCHANGE);
         SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
     }
 

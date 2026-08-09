@@ -39,7 +39,7 @@ public abstract class WidgetWindowBase : Window
     [DllImport("user32.dll")]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
 
-    protected WidgetWindowBase(WidgetKind kind)
+    protected WidgetWindowBase(WidgetKind kind, bool topmost = false)
     {
         _kind = kind;
         _settings = AppConfig.Load();
@@ -48,7 +48,9 @@ public abstract class WidgetWindowBase : Window
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = System.Windows.Media.Brushes.Transparent;
-        Topmost = true;
+        // 显示型小组件不置顶：只在桌面显示（应用窗口打开时盖在其上）；
+        // 交互型（搜索）通过 topmost: true 置顶呼出
+        Topmost = topmost;
         ShowInTaskbar = false;
         ResizeMode = ResizeMode.NoResize;
         Opacity = _settings.Opacity;

@@ -23,15 +23,16 @@ public partial class DesktopDockWindow : Window
     {
         InitializeComponent();
 
-        // 位置：底部居中（用 WorkArea，任务栏显隐都正确）
-        var work = SystemParameters.WorkArea;
-        Top = work.Bottom - 108;
+        // 位置：底部贴底居中（SPI_SETWORKAREA 已预留底部区域，应用最大化不会覆盖）
+        var screenH = NativeMethods.GetSystemMetrics(1); // SM_CYSCREEN
+        Top = screenH - 108;
         SizeChanged += (_, _) =>
         {
             if (ActualWidth > 0)
-                Left = work.Left + (work.Width - ActualWidth) / 2;
+                Left = (NativeMethods.GetSystemMetrics(0) - ActualWidth) / 2;
         };
 
+        SourceInitialized += OnSourceInitialized;
         RefreshRunningApps();
 
         // 应用列表刷新（5 秒）
@@ -45,6 +46,19 @@ public partial class DesktopDockWindow : Window
         _focusTimer.Start();
 
         Closing += OnWindowClosing;
+    }
+
+    /// <summary>设为工具窗口：不出现在 Alt+Tab 切换列表。</summary>
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        try
+        {
+            NativeMethods.SetToolWindow(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Dock.ToolWindow", ex);
+        }
     }
 
     // ---- 磁贴 ----
@@ -96,7 +110,7 @@ public partial class DesktopDockWindow : Window
         ActivateOrMinimize(processId);
     }
 
-    /// <summary>任务栏行为：已在前台则最小化，否则激活。</summary>
+    /// <summary>任务栏行为：已在前台则最小化，否则激活（Alt 键技巧解除前台锁定）。</summary>
     private static void ActivateOrMinimize(int processId)
     {
         try
@@ -108,7 +122,7 @@ public partial class DesktopDockWindow : Window
             if (NativeMethods.GetForegroundWindow() == handle)
                 NativeMethods.ShowWindow(handle, NativeMethods.SW_MINIMIZE);
             else
-                NativeMethods.SetForegroundWindow(handle);
+                NativeMethods.ActivateWindow(handle);
         }
         catch
         {
