@@ -31,7 +31,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         Dictate,   // 听写中
     }
 
-    private readonly ChatSessionService _chat = new();
+    private readonly ChatSessionService _chat = new("pet");
     private readonly List<ImageSource> _idleFrames = new();
     private readonly List<ImageSource> _walkFrames = new();
     private readonly Random _rnd = new();
@@ -299,8 +299,22 @@ public partial class PetWidgetWindow : WidgetWindowBase
             // 窗口可能已关闭：防止回写已释放控件
             if (!IsLoaded)
                 return;
-            BubbleText.Text = reply;
-        }, "Pet.Chat");
+            BubbleText.Text = reply; // 最终完整回复（净化后）
+        }, "Pet.Chat",
+        onDelta: chunk =>
+        {
+            if (!IsLoaded)
+                return;
+            if (BubbleText.Text == "🧠 思考中…" || BubbleText.Text.StartsWith("（正在"))
+                BubbleText.Text = "";
+            BubbleText.Text += chunk; // 流式实时显示
+        },
+        onToolRunning: (name, _) =>
+        {
+            if (!IsLoaded)
+                return;
+            BubbleText.Text = $"（正在执行 {name}…）";
+        });
 
         if (!IsLoaded)
             return;

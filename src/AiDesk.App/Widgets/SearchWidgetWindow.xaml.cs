@@ -21,13 +21,32 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     /// <summary>搜索结果条目（应用 + 图标 + 所在目录）。</summary>
     public sealed record SearchResult(StartMenuApp App, ImageSource? Icon, string Dir);
 
-    /// <summary>聊天消息（AI 对话 Tab）。</summary>
-    public sealed record ChatMessage(string Role, string Text);
+    /// <summary>聊天消息（AI 对话 Tab，可变文本支持流式追加）。</summary>
+    public sealed class ChatMessage : System.ComponentModel.INotifyPropertyChanged
+    {
+        public string Role { get; init; } = "";
+        private string _text = "";
+
+        public string Text
+        {
+            get => _text;
+            set
+            {
+                if (_text != value)
+                {
+                    _text = value;
+                    PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Text)));
+                }
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    }
 
     private readonly IReadOnlyList<StartMenuApp> _startMenuApps;
     private readonly Dictionary<string, ImageSource?> _iconCache = new();
     private readonly ClipboardMonitor _clipboard = new();
-    private readonly ChatSessionService _chat = new();
+    private readonly ChatSessionService _chat = new("search");
     private int _clipPage;
     private bool _clipExpanded = true;
 
@@ -41,6 +60,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         RefreshClipboard();
         VoiceBox.ItemsSource = PetTtsService.Voices;
         VoiceBox.SelectedValue = AppConfig.Load().AI.Voice;
+        InitPermissionBoxes();
         StartTickerMs(1000); // 剪贴板历史每秒刷新
 
         // 失焦自动隐藏（点击面板外任意处即关闭，类似 Spotlight）
@@ -97,6 +117,42 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     }
 
     private void OnAITabClick(object sender, RoutedEventArgs e) => SetTab();
+
+    // ---- 工具权限设置（危险工具 allow/deny/ask） ----
+
+    private static readonly (string Value, string Label)[] PermOptions =
+    {
+        ("ask", "询问"),
+        ("allow", "允许"),
+        ("deny", "拒绝"),
+    };
+
+    private void InitPermissionBoxes()
+    {
+        var perms = AppConfig.Load().AI.ToolPermissions;
+        InitPermBox(KillPermBox, "kill_process", perms);
+        InitPermBox(TempPermBox, "clear_temp", perms);
+        InitPermBox(CleanPermBox, "cleanup_computer", perms);
+    }
+
+    private static void InitPermBox(System.Windows.Controls.ComboBox box, string tool, Dictionary<string, string> perms)
+    {
+        box.ItemsSource = PermOptions;
+        box.DisplayMemberPath = "Label";
+        box.SelectedValuePath = "Value";
+        box.SelectedValue = perms.TryGetValue(tool, out var rule) ? rule : "ask";
+    }
+
+    private void OnPermChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.ComboBox { Tag: string tool } box ||
+            box.SelectedValue is not string rule)
+            return;
+        var settings = AppConfig.Load();
+        settings.AI.ToolPermissions[tool] = rule;
+        AppConfig.Save(settings);
+        Telemetry.Event("Search", $"权限 {tool}={rule}");
+    }
 
     // ---- 宠物音色设置 ----
 
@@ -301,25 +357,33 @@ public partial class SearchWidgetWindow : WidgetWindowBase
             return;
 
         ChatInput.Clear();
-        AddChatMessage("user", message);
+        var userMsg = new ChatMessage { Role = "user", Text = message };
+        ChatList.Items.Add(userMsg);
+        var assistantMsg = new ChatMessage { Role = "assistant" };
+        ChatList.Items.Add(assistantMsg);
+        ChatScroll.ScrollToEnd();
 
         await _chat.SendAsync(message, content =>
         {
             // 窗口可能已在请求期间关闭（_chat.Dispose 已执行），防止回写已释放控件
             if (!IsLoaded)
                 return;
-            AddChatMessage("assistant", content);
+            assistantMsg.Text = content;
             ChatScroll.ScrollToEnd();
-        }, "Search.Chat");
+        }, "Search.Chat",
+        onDelta: chunk =>
+        {
+            if (!IsLoaded)
+                return;
+            assistantMsg.Text += chunk; // 流式追加，实时显示
+        },
+        onToolRunning: (name, _) =>
+        {
+            if (!IsLoaded)
+                return;
+            assistantMsg.Text = $"（正在执行 {name}…）";
+        });
     }
-
-    private void AddChatMessage(string role, string text)
-    {
-        ChatList.Items.Add(new ChatMessage(role, text));
-        ChatScroll.ScrollToEnd();
-    }
-
-    // ---- AI 对话 ----
 
     private void OnAIButtonClick(object sender, RoutedEventArgs e)
     {

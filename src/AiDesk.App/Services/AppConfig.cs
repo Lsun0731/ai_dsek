@@ -12,6 +12,9 @@ public static class AppConfig
     private static readonly string ConfigDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AiDesk");
 
+    /// <summary>数据目录（%LOCALAPPDATA%\AiDesk），会话历史等附属文件存放于此。</summary>
+    public static string DataDirectory => ConfigDir;
+
     private static readonly string ConfigPath = Path.Combine(ConfigDir, "settings.json");
 
     /// <summary>旧小组件配置路径。</summary>

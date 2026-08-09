@@ -112,24 +112,114 @@ public class AIChatClientTests
         Assert.Contains("工具调用轮次过多", reply.Error);
     }
 
+    [Fact]
+    public async Task ChatWithToolsAsync_重复相同调用_触发DoomLoop拦截()
+    {
+        const string toolResponse = """
+            {"choices":[{"message":{"role":"assistant","content":null,
+              "tool_calls":[{"id":"call_1","type":"function",
+                "function":{"name":"try_x","arguments":"{}"}}]}}]}
+            """;
+        const string finalResponse = """
+            {"choices":[{"message":{"role":"assistant","content":"已换策略"}}]}
+            """;
+        // 4 次相同工具请求 + 最终回复
+        var responses = Enumerable.Repeat(toolResponse, 4).Append(finalResponse);
+        using var client = new AIChatClient(new FakeHandler(responses));
+
+        var executed = 0;
+        var reply = await client.ChatWithToolsAsync(
+            new AIChatSettings { ApiKey = "k" },
+            "重试",
+            new[] { new AITool { Name = "try_x", Description = "试", ParametersJsonSchema = "{}" } },
+            (_, _) => { executed++; return Task.FromResult("fail"); });
+
+        Assert.False(reply.IsError);
+        Assert.Equal("已换策略", reply.Content);
+        // 前 2 次执行，第 3 次起被 Doom-loop 拦截（不再调 executor）
+        Assert.Equal(2, executed);
+    }
+
+    [Fact]
+    public async Task ChatWithToolsAsync_长工具输出_被截断()
+    {
+        const string toolResponse = """
+            {"choices":[{"message":{"role":"assistant","content":null,
+              "tool_calls":[{"id":"call_1","type":"function",
+                "function":{"name":"big","arguments":"{}"}}]}}]}
+            """;
+        const string finalResponse = """
+            {"choices":[{"message":{"role":"assistant","content":"完成"}}]}
+            """;
+        var handler = new FakeHandler([toolResponse, finalResponse]);
+        using var client = new AIChatClient(handler);
+
+        var longOutput = new string('x', 3000);
+        var reply = await client.ChatWithToolsAsync(
+            new AIChatSettings { ApiKey = "k" },
+            "大输出",
+            new[] { new AITool { Name = "big", Description = "大", ParametersJsonSchema = "{}" } },
+            (_, _) => Task.FromResult(longOutput));
+
+        Assert.False(reply.IsError);
+        // 工具结果截断：保留前 2000 字符（x 为 ASCII 不转义），更长的被截掉
+        var second = handler.RequestBodies[1];
+        Assert.Contains(new string('x', 2000), second);
+        Assert.DoesNotContain(new string('x', 2500), second);
+    }
+
+    [Fact]
+    public async Task ChatWithToolsAsync_临时错误_自动重试成功()
+    {
+        const string okResponse = """
+            {"choices":[{"message":{"role":"assistant","content":"重试成功"}}]}
+            """;
+        var handler = new FakeHandler([]);
+        handler.AddStatus(429);      // 第一次 429
+        handler.AddBody(okResponse); // 重试成功
+        using var client = new AIChatClient(handler);
+
+        var reply = await client.ChatWithToolsAsync(
+            new AIChatSettings { ApiKey = "k" },
+            "你好",
+            [],
+            (_, _) => Task.FromResult(""));
+
+        Assert.False(reply.IsError);
+        Assert.Equal("重试成功", reply.Content);
+        Assert.Equal(2, handler.RequestBodies.Count); // 1 次失败 + 1 次重试
+    }
+
     private sealed class FakeHandler : HttpMessageHandler
     {
-        private readonly Queue<string> _responses;
+        private readonly Queue<Func<HttpResponseMessage>> _responses = new();
 
         public List<string> RequestBodies { get; } = [];
 
-        public FakeHandler(IEnumerable<string> responses) => _responses = new Queue<string>(responses);
+        public FakeHandler(IEnumerable<string> responses)
+        {
+            foreach (var body in responses)
+                AddBody(body);
+        }
+
+        /// <summary>追加一条 200 响应。</summary>
+        public void AddBody(string json) => _responses.Enqueue(() => Ok(json));
+
+        /// <summary>追加一条指定状态码的响应（用于测试重试）。</summary>
+        public void AddStatus(int status)
+            => _responses.Enqueue(() => new HttpResponseMessage((HttpStatusCode)status));
+
+        private static HttpResponseMessage Ok(string json) => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json"),
+        };
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             var body = request.Content?.ReadAsStringAsync(ct).Result ?? "";
             RequestBodies.Add(body);
-            var json = _responses.Count > 0 ? _responses.Dequeue() : "{}";
-            var response = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json"),
-            };
-            return Task.FromResult(response);
+            var respond = _responses.Count > 0 ? _responses.Dequeue() : () => Ok("{}");
+            return Task.FromResult(respond());
         }
     }
 }

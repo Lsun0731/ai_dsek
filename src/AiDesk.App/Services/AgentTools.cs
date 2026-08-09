@@ -195,12 +195,19 @@ public static partial class AgentTools
 
         if (tool.RequireConfirm)
         {
-            var summary = Summarize(tool, argumentsJson);
-            var confirmed = Application.Current.Dispatcher.Invoke(() =>
-                MessageBox.Show($"确定要执行「{summary}」吗？", "AiDesk 操作确认",
-                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes);
-            if (!confirmed)
-                return "用户取消了该操作";
+            // 权限规则：allow 直接执行 / deny 拒绝 / ask（缺省）弹确认
+            var rule = AppConfig.Load().AI.ToolPermissions.TryGetValue(tool.Name, out var r) ? r : "ask";
+            if (rule == "deny")
+                return $"用户已禁止「{tool.Name}」操作";
+            if (rule != "allow")
+            {
+                var summary = Summarize(tool, argumentsJson);
+                var confirmed = Application.Current.Dispatcher.Invoke(() =>
+                    MessageBox.Show($"确定要执行「{summary}」吗？", "AiDesk 操作确认",
+                        MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes);
+                if (!confirmed)
+                    return "用户取消了该操作";
+            }
         }
 
         try

@@ -373,6 +373,7 @@
             <Grid Grid.Row="2" x:Name="AIPage" Margin="0,4,0,0" Visibility="Collapsed">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
@@ -392,8 +393,22 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- 工具权限行 -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="16,4,16,0" VerticalAlignment="Center">
+                    <TextBlock Text="危险工具" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
+                    <TextBlock Text="结束进程" FontSize="11" Foreground="#3C4043" VerticalAlignment="Center" Margin="12,0,0,0" />
+                    <ComboBox x:Name="KillPermBox" Width="70" Height="24" FontSize="10.5" Margin="6,0,0,0"
+                              SelectionChanged="OnPermChanged" Tag="kill_process" />
+                    <TextBlock Text="清临时" FontSize="11" Foreground="#3C4043" VerticalAlignment="Center" Margin="12,0,0,0" />
+                    <ComboBox x:Name="TempPermBox" Width="70" Height="24" FontSize="10.5" Margin="6,0,0,0"
+                              SelectionChanged="OnPermChanged" Tag="clear_temp" />
+                    <TextBlock Text="一键清理" FontSize="11" Foreground="#3C4043" VerticalAlignment="Center" Margin="12,0,0,0" />
+                    <ComboBox x:Name="CleanPermBox" Width="70" Height="24" FontSize="10.5" Margin="6,0,0,0"
+                              SelectionChanged="OnPermChanged" Tag="cleanup_computer" />
+                </StackPanel>
+
                 <!-- 聊天记录 -->
-                <ScrollViewer Grid.Row="1" x:Name="ChatScroll" MaxHeight="300" VerticalScrollBarVisibility="Auto"
+                <ScrollViewer Grid.Row="2" x:Name="ChatScroll" MaxHeight="300" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled" Margin="8,6,8,0">
                     <ItemsControl x:Name="ChatList">
                         <ItemsControl.ItemTemplate>
@@ -418,7 +433,7 @@
                 </ScrollViewer>
 
                 <!-- 输入行 -->
-                <Grid Grid.Row="2" Margin="16,8,16,12">
+                <Grid Grid.Row="3" Margin="16,8,16,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
