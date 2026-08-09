@@ -3,13 +3,49 @@ using System.Text.Json;
 
 namespace AiDesk.App.Services;
 
-/// <summary>小组件设置。</summary>
+/// <summary>小组件类型。</summary>
+public enum WidgetKind
+{
+    /// <summary>系统状态（CPU/内存/磁盘/网络）</summary>
+    Stats,
+
+    /// <summary>日期</summary>
+    Date,
+
+    /// <summary>天气</summary>
+    Weather,
+}
+
+/// <summary>单个小组件的持久化状态。</summary>
+public sealed class WidgetState
+{
+    public double Left { get; set; }
+    public double Top { get; set; }
+    public bool IsOpen { get; set; }
+}
+
+/// <summary>小组件全局配置。</summary>
 public sealed class WidgetSettings
 {
-    public double Left { get; set; } = 100;
-    public double Top { get; set; } = 100;
-    public double Opacity { get; set; } = 0.85;
-    public bool IsWidgetOpen { get; set; }
+    /// <summary>全局透明度（0.3-1.0，作用于所有小组件）。</summary>
+    public double Opacity { get; set; } = 0.9;
+
+    /// <summary>天气城市。</summary>
+    public string WeatherCity { get; set; } = "北京";
+
+    /// <summary>各小组件状态（按类型名）。</summary>
+    public Dictionary<string, WidgetState> Widgets { get; set; } = new();
+
+    public WidgetState GetState(WidgetKind kind)
+    {
+        var key = kind.ToString();
+        if (!Widgets.TryGetValue(key, out var state))
+        {
+            state = new WidgetState { Left = 80 + Widgets.Count * 40, Top = 80 + Widgets.Count * 30 };
+            Widgets[key] = state;
+        }
+        return state;
+    }
 }
 
 /// <summary>小组件配置持久化（%LOCALAPPDATA%\AiDesk\config.json）。</summary>

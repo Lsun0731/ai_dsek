@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="960">
     <Grid Margin="32,28">
@@ -14,42 +13,95 @@
 
         <StackPanel>
             <TextBlock Text="桌面小组件" Style="{StaticResource PageTitle}" />
-            <TextBlock Text="悬浮时钟与系统监控小组件，可拖动、可调透明度" Style="{StaticResource PageSubtitle}" />
+            <TextBlock Text="每个小组件独立显示，可拖动、可调透明度" Style="{StaticResource PageSubtitle}" />
         </StackPanel>
 
-        <Border Grid.Row="1" Margin="0,24,0,0" Style="{StaticResource ModernCard}" MaxWidth="540" HorizontalAlignment="Left">
-            <StackPanel>
-                <Grid Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="显示小组件" FontSize="14" />
-                        <TextBlock Text="时钟 + 日期 + CPU/内存监控悬浮窗" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
-                    </StackPanel>
-                    <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
-                                  IsChecked="{Binding IsWidgetOpen}" />
-                </Grid>
+        <Grid Grid.Row="1" Margin="0,24,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-                <Grid Margin="0,16,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Text="透明度" FontSize="14" />
-                        <TextBlock Text="小组件整体不透明度" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
-                    </StackPanel>
-                    <TextBlock Grid.Column="1" Text="{Binding WidgetOpacity, StringFormat={}{0:P0}}"
-                               VerticalAlignment="Center" FontSize="13" Foreground="#8A9099" />
-                </Grid>
-                <Slider Minimum="0.3" Maximum="1.0" Value="{Binding WidgetOpacity}"
-                        TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,6,0,0" />
+            <!-- 小组件开关 -->
+            <Border Style="{StaticResource ModernCard}" Padding="24">
+                <StackPanel>
+                    <TextBlock Text="小组件" Style="{StaticResource CardTitle}" />
+                    <TextBlock Text="独立显示，互不影响" Style="{StaticResource CardDesc}" Margin="0,4,0,16" />
 
-                <TextBlock Text="使用说明：小组件置顶显示，按住拖动到任意位置；点 ✕ 关闭。位置与透明度自动保存。"
-                           FontSize="12" Foreground="#8A9099" TextWrapping="Wrap" Margin="0,20,0,0" />
-            </StackPanel>
-        </Border>
+                    <!-- 系统状态 -->
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="⚡ 系统状态" FontSize="14" />
+                            <TextBlock Text="CPU · 内存 · 磁盘 · 网络" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
+                                      IsChecked="{Binding StatsOpen}" />
+                    </Grid>
+
+                    <!-- 日期 -->
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="📅 日期" FontSize="14" />
+                            <TextBlock Text="星期 · 日期 · 年份" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
+                                      IsChecked="{Binding DateOpen}" />
+                    </Grid>
+
+                    <!-- 天气 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="⛅ 天气" FontSize="14" />
+                            <TextBlock Text="实时温度 · 湿度 · 今日预报" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
+                                      IsChecked="{Binding WeatherOpen}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 设置 -->
+            <Border Grid.Column="2" Style="{StaticResource ModernCard}">
+                <StackPanel>
+                    <TextBlock Text="设置" Style="{StaticResource CardTitle}" />
+                    <TextBlock Text="全局外观与天气城市" Style="{StaticResource CardDesc}" Margin="0,4,0,16" />
+
+                    <!-- 天气城市 -->
+                    <TextBlock Text="天气城市" FontSize="13" Foreground="#4A515B" Margin="0,0,0,6" />
+                    <TextBox Text="{Binding WeatherCity, UpdateSourceTrigger=PropertyChanged}"
+                             Height="34" VerticalContentAlignment="Center" Padding="10,0" />
+
+                    <TextBlock Text="透明度" FontSize="13" Foreground="#4A515B" Margin="0,18,0,4" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <Slider Minimum="0.3" Maximum="1.0" Value="{Binding WidgetOpacity}"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True" />
+                        <TextBlock Grid.Column="1" Text="{Binding WidgetOpacity, StringFormat={}{0:P0}}"
+                                   VerticalAlignment="Center" TextAlignment="Right" FontSize="13" Foreground="#8A9099" />
+                    </Grid>
+
+                    <TextBlock Style="{StaticResource HintText}" Margin="0,20,0,0">
+                        使用说明：每个小组件独立显示在桌面上，按住拖动到任意位置；点窗口内 ✕ 关闭；
+                        天气数据来自 wttr.in（免费），每 30 分钟自动刷新；所有设置自动保存。
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

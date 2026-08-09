@@ -1,0 +1,40 @@
+﻿<widgets:WidgetWindowBase x:Class="AiDesk.App.Widgets.WeatherWidgetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:widgets="clr-namespace:AiDesk.App.Widgets"
+        Title="天气" Width="224" MouseLeftButtonDown="OnDrag">
+
+    <Border Style="{StaticResource WidgetCard}" MouseLeftButtonDown="OnDrag">
+        <Grid>
+            <StackPanel>
+                <Grid>
+                    <TextBlock x:Name="CityText" Text="北京" FontSize="13" FontWeight="SemiBold"
+                               Foreground="#CCFFFFFF" VerticalAlignment="Center" />
+                    <Button x:Name="RefreshBtn" Content="⟳" Width="24" Height="24" FontSize="12"
+                            HorizontalAlignment="Right" Background="Transparent" Foreground="#8AFFFFFF"
+                            BorderThickness="0" Cursor="Hand" Click="OnRefreshClicked" ToolTip="刷新天气" />
+                </Grid>
+
+                <Grid Margin="0,10,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="IconText" Text="⛅" FontSize="30" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock x:Name="TempText" Text="--°" FontSize="32" FontWeight="Light" Foreground="White"
+                                   FontFamily="Segoe UI Light, Microsoft YaHei UI" />
+                        <TextBlock x:Name="DescText" Text="加载中…" FontSize="12" Foreground="#B0FFFFFF" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock x:Name="DetailText" Text="湿度 --% · 风 -- km/h · 今日 -- ~ --°"
+                           FontSize="11" Foreground="#99FFFFFF" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Content="✕" Width="20" Height="20" FontSize="9" HorizontalAlignment="Right"
+                    VerticalAlignment="Top" Margin="0,-8,-8,0" Background="Transparent"
+                    Foreground="#66FFFFFF" BorderThickness="0" Cursor="Hand"
+                    Click="OnCloseClicked" ToolTip="关闭小组件" />
+        </Grid>
+    </Border>
+</widgets:WidgetWindowBase>

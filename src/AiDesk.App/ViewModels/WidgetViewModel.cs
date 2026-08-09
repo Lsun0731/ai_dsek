@@ -5,62 +5,120 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AiDesk.App.ViewModels;
 
-/// <summary>桌面小组件页 ViewModel：控制时钟/监控小组件的显示与外观。</summary>
+/// <summary>
+/// 桌面小组件页 ViewModel：独立控制 系统状态 / 日期 / 天气 三个小组件。
+/// </summary>
 public partial class WidgetViewModel : ObservableObject, IDisposable
 {
-    private SystemWidgetWindow? _window;
+    private readonly Dictionary<WidgetKind, WidgetWindowBase> _windows = [];
     private readonly WidgetSettings _settings = WidgetConfig.Load();
 
     [ObservableProperty]
-    private bool _isWidgetOpen;
+    private bool _statsOpen;
 
     [ObservableProperty]
-    private double _widgetOpacity = 0.85;
+    private bool _dateOpen;
+
+    [ObservableProperty]
+    private bool _weatherOpen;
+
+    [ObservableProperty]
+    private double _widgetOpacity = 0.9;
+
+    [ObservableProperty]
+    private string _weatherCity = "北京";
 
     public WidgetViewModel()
     {
         WidgetOpacity = _settings.Opacity;
+        WeatherCity = _settings.WeatherCity;
+        StatsOpen = _settings.GetState(WidgetKind.Stats).IsOpen;
+        DateOpen = _settings.GetState(WidgetKind.Date).IsOpen;
+        WeatherOpen = _settings.GetState(WidgetKind.Weather).IsOpen;
     }
 
-    partial void OnIsWidgetOpenChanged(bool value)
+    private bool _suppressToggle;
+
+    partial void OnStatsOpenChanged(bool value)
     {
-        if (value)
-            OpenWidget();
-        else
-            CloseWidget();
+        if (!_suppressToggle)
+            ToggleWidget(WidgetKind.Stats, value, () => new StatsWidgetWindow());
+    }
+
+    partial void OnDateOpenChanged(bool value)
+    {
+        if (!_suppressToggle)
+            ToggleWidget(WidgetKind.Date, value, () => new DateWidgetWindow());
+    }
+
+    partial void OnWeatherOpenChanged(bool value)
+    {
+        if (!_suppressToggle)
+            ToggleWidget(WidgetKind.Weather, value, () => new WeatherWidgetWindow());
     }
 
     partial void OnWidgetOpacityChanged(double value)
     {
         _settings.Opacity = value;
         WidgetConfig.Save(_settings);
-        if (_window is not null)
-            _window.Opacity = value;
+        foreach (var window in _windows.Values)
+            window.SetWidgetOpacity(value);
     }
 
-    private void OpenWidget()
+    partial void OnWeatherCityChanged(string value)
     {
-        if (_window is not null)
-            return;
-        _window = new SystemWidgetWindow { Opacity = WidgetOpacity };
-        _window.Closed += (_, _) =>
+        _settings.WeatherCity = value;
+        WidgetConfig.Save(_settings);
+        if (_windows.TryGetValue(WidgetKind.Weather, out var weather))
+            weather.RefreshNow();
+    }
+
+    private void ToggleWidget(WidgetKind kind, bool open, Func<WidgetWindowBase> factory)
+    {
+        if (open)
         {
-            _window = null;
-            IsWidgetOpen = false;
-        };
-        _window.Show();
-        Telemetry.Event("Widget", "打开小组件");
+            if (_windows.ContainsKey(kind))
+                return;
+            var window = factory();
+            window.Closed += (_, _) =>
+            {
+                _windows.Remove(kind);
+                SetOpenFlagSilently(kind, false);
+            };
+            _windows[kind] = window;
+            window.Show();
+            Telemetry.Event("Widget", $"打开 {kind}");
+        }
+        else if (_windows.TryGetValue(kind, out var existing))
+        {
+            existing.Close();
+        }
     }
 
-    private void CloseWidget()
+    /// <summary>窗口被关闭后同步开关状态（suppress 防止 OnXxxChanged 递归）。</summary>
+    private void SetOpenFlagSilently(WidgetKind kind, bool value)
     {
-        _window?.Close();
+        _suppressToggle = true;
+        try
+        {
+            switch (kind)
+            {
+                case WidgetKind.Stats: StatsOpen = value; break;
+                case WidgetKind.Date: DateOpen = value; break;
+                case WidgetKind.Weather: WeatherOpen = value; break;
+            }
+        }
+        finally
+        {
+            _suppressToggle = false;
+        }
     }
 
     public void Dispose()
     {
-        _window?.Close();
-        _window = null;
+        foreach (var window in _windows.Values)
+            window.Close();
+        _windows.Clear();
         GC.SuppressFinalize(this);
     }
 }

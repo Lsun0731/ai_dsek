@@ -1,0 +1,75 @@
+﻿<widgets:WidgetWindowBase x:Class="AiDesk.App.Widgets.StatsWidgetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:widgets="clr-namespace:AiDesk.App.Widgets"
+        Title="系统状态" Width="248"
+        MouseLeftButtonDown="OnDrag">
+
+    <Border Style="{StaticResource WidgetCard}" MouseLeftButtonDown="OnDrag">
+        <Grid>
+            <StackPanel>
+                <TextBlock Text="⚡ 系统状态" FontSize="12" FontWeight="SemiBold" Foreground="#B0FFFFFF"
+                           Margin="0,0,0,12" />
+
+            <!-- CPU -->
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="44" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="CPU" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
+                <ProgressBar Grid.Column="1" x:Name="CpuBar" Style="{StaticResource WidgetProgressBar}"
+                             VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" x:Name="CpuText" Text="--%" FontSize="11" Foreground="White"
+                           TextAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- 内存 -->
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="44" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="内存" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
+                <ProgressBar Grid.Column="1" x:Name="MemBar" Style="{StaticResource WidgetProgressBar}"
+                             VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" x:Name="MemText" Text="--%" FontSize="11" Foreground="White"
+                           TextAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- 磁盘（最多显示 2 个固定盘） -->
+            <Grid x:Name="DiskPanel" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="44" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="DiskName" Text="C:" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
+                <ProgressBar Grid.Column="1" x:Name="DiskBar" Style="{StaticResource WidgetProgressBar}"
+                             VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" x:Name="DiskText" Text="--%" FontSize="11" Foreground="White"
+                           TextAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- 网络 -->
+            <Grid Margin="0,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="网络" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" x:Name="NetText" Text="↓ --  ↑ --" FontSize="11" Foreground="#CCFFFFFF"
+                           TextAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+
+            <TextBlock x:Name="MemDetail" Text="" FontSize="10" Foreground="#80FFFFFF" Margin="0,8,0,0" />
+            </StackPanel>
+            <Button Content="✕" Width="20" Height="20" FontSize="9" HorizontalAlignment="Right"
+                    VerticalAlignment="Top" Margin="0,-8,-8,0" Background="Transparent"
+                    Foreground="#66FFFFFF" BorderThickness="0" Cursor="Hand"
+                    Click="OnCloseClicked" ToolTip="关闭小组件" />
+        </Grid>
+    </Border>
+</widgets:WidgetWindowBase>

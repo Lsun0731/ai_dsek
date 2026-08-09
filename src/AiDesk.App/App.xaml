@@ -65,6 +65,34 @@
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
 
+            <!-- ===== 桌面小组件样式 ===== -->
+            <!-- 小组件卡片：半透明深色毛玻璃感 -->
+            <Style x:Key="WidgetCard" TargetType="Border">
+                <Setter Property="Background" Value="#D914181C" />
+                <Setter Property="CornerRadius" Value="18" />
+                <Setter Property="BorderBrush" Value="#26FFFFFF" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="18,16" />
+            </Style>
+
+            <!-- 小组件进度条（圆角轨道 + 圆角填充） -->
+            <Style x:Key="WidgetProgressBar" TargetType="ProgressBar">
+                <Setter Property="Height" Value="6" />
+                <Setter Property="Background" Value="#33FFFFFF" />
+                <Setter Property="Foreground" Value="#5B8DF5" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Grid>
+                                <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="3" />
+                                <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}"
+                                        CornerRadius="3" HorizontalAlignment="Left" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- 圆角色块按钮（强调色拾色器用） -->
             <Style x:Key="ColorSwatchButton" TargetType="Button">
                 <Setter Property="Width" Value="32" />
