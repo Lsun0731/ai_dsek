@@ -23,6 +23,13 @@ public abstract class WidgetWindowBase : Window
     private readonly WidgetSettings _settings;
     private DispatcherTimer? _ticker;
 
+    /// <summary>
+    /// 关闭时是否把 IsOpen=false 落盘。手动点 ✕ / 页面开关关闭 = true（记住关闭）；
+    /// 应用退出（WidgetViewModel.Dispose 前置 false）= 保留打开状态，重启恢复。
+    /// Left/Top 位置始终落盘。
+    /// </summary>
+    internal bool PersistCloseState { get; set; } = true;
+
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
     private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
 
@@ -141,7 +148,8 @@ public abstract class WidgetWindowBase : Window
         var state = settings.GetState(_kind);
         state.Left = Left;
         state.Top = Top;
-        state.IsOpen = false;
+        if (PersistCloseState)
+            state.IsOpen = false;
         WidgetConfig.Save(settings);
         Telemetry.Event("Widget", $"关闭 {_kind}");
     }

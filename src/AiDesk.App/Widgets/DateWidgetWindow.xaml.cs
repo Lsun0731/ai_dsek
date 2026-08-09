@@ -1,4 +1,3 @@
-using System.Windows;
 using AiDesk.Core.Diagnostics;
 
 namespace AiDesk.App.Widgets;
