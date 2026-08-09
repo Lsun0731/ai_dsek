@@ -76,6 +76,7 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
     public DesktopViewModel()
     {
         SelectedStyle = Styles.First(s => s.Value == WallpaperStyle.Fill);
+        _wallpaper.SlideshowError += OnSlideshowError;
         try
         {
             _wallpaperPath = _wallpaper.GetCurrentWallpaper();
@@ -141,21 +142,56 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
             SlideshowFolder = dialog.FolderName;
     }
 
+    private bool _suppressSlideshowToggle;
+
+    /// <summary>设置开关而不触发 OnSlideshowEnabledChanged（避免失败回滚/错误回调的递归）。</summary>
+    private void SetSlideshowEnabledSilently(bool value)
+    {
+        _suppressSlideshowToggle = true;
+        try
+        {
+            SlideshowEnabled = value;
+        }
+        finally
+        {
+            _suppressSlideshowToggle = false;
+        }
+    }
+
     partial void OnSlideshowEnabledChanged(bool value)
     {
+        if (_suppressSlideshowToggle)
+            return;
         if (value)
             StartSlideshow();
         else
-            StopSlideshow();
+            StopSlideshowCore();
+    }
+
+    /// <summary>轮播线程出错回调：切回 UI 线程展示错误并关闭开关。</summary>
+    private void OnSlideshowError(string message)
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            SlideshowStatus = $"轮播已停止：{message}";
+            SetSlideshowEnabledSilently(false);
+        });
     }
 
     private void StartSlideshow()
     {
+        // 防重入：已运行（如「立即切换」已启动）只更新状态
+        if (_wallpaper.IsSlideshowRunning)
+        {
+            SlideshowStatus = $"轮播中：每 {SlideshowIntervalMinutes} 分钟切换";
+            return;
+        }
+
         var images = ScanImages(SlideshowFolder);
         if (images.Count == 0)
         {
             SlideshowStatus = "文件夹中没有找到图片，请选择包含图片的文件夹";
-            SlideshowEnabled = false;
+            SetSlideshowEnabledSilently(false);
             return;
         }
         try
@@ -167,14 +203,14 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             SlideshowStatus = $"启动失败：{ex.Message}";
-            SlideshowEnabled = false;
+            SetSlideshowEnabledSilently(false);
         }
     }
 
-    private void StopSlideshow()
+    /// <summary>纯停止（不写状态消息，避免覆盖启动失败/错误提示）。</summary>
+    private void StopSlideshowCore()
     {
         _wallpaper.StopSlideshow();
-        SlideshowStatus = "轮播已停止";
     }
 
     [RelayCommand]
@@ -186,19 +222,20 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
             {
                 _wallpaper.NextWallpaper(SelectedStyle?.Value ?? WallpaperStyle.Fill);
                 SlideshowStatus = "已切换下一张";
+                return;
             }
-            else
+
+            // 未启用轮播：切换一张并同步启动轮播（开关置为开）
+            var images = ScanImages(SlideshowFolder);
+            if (images.Count == 0)
             {
-                var images = ScanImages(SlideshowFolder);
-                if (images.Count == 0)
-                {
-                    SlideshowStatus = "请先选择壁纸文件夹";
-                    return;
-                }
-                _wallpaper.StartSlideshow(images, TimeSpan.FromMinutes(SlideshowIntervalMinutes),
-                    SelectedStyle?.Value ?? WallpaperStyle.Fill, SlideshowShuffle, applyImmediately: true);
-                SlideshowStatus = "已切换一张（轮播已启动）";
+                SlideshowStatus = "请先选择壁纸文件夹";
+                return;
             }
+            _wallpaper.StartSlideshow(images, TimeSpan.FromMinutes(SlideshowIntervalMinutes),
+                SelectedStyle?.Value ?? WallpaperStyle.Fill, SlideshowShuffle, applyImmediately: true);
+            SetSlideshowEnabledSilently(true);
+            SlideshowStatus = "已切换一张（轮播已启动）";
         }
         catch (Exception ex)
         {

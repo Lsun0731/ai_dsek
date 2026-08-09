@@ -13,9 +13,14 @@ public sealed class WallpaperService : IDisposable
     private System.Timers.Timer? _timer;
     private string[] _slidePaths = [];
     private int _slideIndex = -1;
+    private WallpaperStyle _slideStyle;
     private readonly Random _random = new();
+    private readonly object _slideLock = new();
 
     private bool _disposed;
+
+    /// <summary>轮播出错时触发（Timer 线程回调，UI 侧需切回 UI 线程）。</summary>
+    public event Action<string>? SlideshowError;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, string? pvParam, uint fWinIni);
@@ -73,24 +78,48 @@ public sealed class WallpaperService : IDisposable
             ? imagePaths.OrderBy(_ => _random.Next()).ToArray()
             : imagePaths.ToArray();
         _slideIndex = -1;
+        _slideStyle = style;
 
         _timer?.Dispose();
         _timer = new System.Timers.Timer(interval.TotalMilliseconds) { AutoReset = true };
-        _timer.Elapsed += (_, _) => NextWallpaper(style);
+        _timer.Elapsed += OnTimerElapsed;
         _timer.Start();
 
         if (applyImmediately)
             NextWallpaper(style);
     }
 
+    /// <summary>Timer 回调：异常必须被捕获，否则会崩整个进程。</summary>
+    private void OnTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        if (_disposed)
+            return;
+        try
+        {
+            NextWallpaper(_slideStyle);
+        }
+        catch (Exception ex)
+        {
+            // 轮播期间图片被删/注册表失败等：停止轮播并上报，避免进程崩溃
+            StopSlideshow();
+            SlideshowError?.Invoke(ex.Message);
+        }
+    }
+
     /// <summary>停止壁纸轮播。</summary>
     public void StopSlideshow()
     {
-        _timer?.Dispose();
-        _timer = null;
+        lock (_slideLock)
+        {
+            _timer?.Dispose();
+            _timer = null;
+        }
     }
 
-    public bool IsSlideshowRunning => _timer is not null;
+    public bool IsSlideshowRunning
+    {
+        get { lock (_slideLock) { return _timer is not null; } }
+    }
 
     /// <summary>立即切换到下一张壁纸（无轮播时也可手动切换）。</summary>
     public void NextWallpaper(WallpaperStyle style)
@@ -98,8 +127,13 @@ public sealed class WallpaperService : IDisposable
         if (_slidePaths.Length == 0)
             return;
 
-        _slideIndex = (_slideIndex + 1) % _slidePaths.Length;
-        SetWallpaper(_slidePaths[_slideIndex], style);
+        lock (_slideLock)
+        {
+            if (_disposed)
+                return;
+            _slideIndex = (_slideIndex + 1) % _slidePaths.Length;
+            SetWallpaper(_slidePaths[_slideIndex], style);
+        }
     }
 
     public void Dispose()
