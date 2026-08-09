@@ -58,7 +58,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         InitializeComponent();
         _startMenuApps = StartMenuAppsProvider.Scan();
         RefreshClipboard();
-        VoiceBox.ItemsSource = PetTtsService.Voices;
+        VoiceBox.ItemsSource = GetGroupedVoices();
         VoiceBox.SelectedValue = AppConfig.Load().AI.Voice;
         InitPermissionBoxes();
         StartTickerMs(1000); // 剪贴板历史每秒刷新
@@ -117,6 +117,15 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     }
 
     private void OnAITabClick(object sender, RoutedEventArgs e) => SetTab();
+
+    /// <summary>音色列表按语言分组（中文/台湾/粤语/英语…）。</summary>
+    private static System.ComponentModel.ICollectionView GetGroupedVoices()
+    {
+        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(PetTtsService.Voices);
+        view.GroupDescriptions.Clear();
+        view.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(PetTtsService.VoiceOption.Language)));
+        return view;
+    }
 
     // ---- 工具权限设置（危险工具 allow/deny/ask） ----
 

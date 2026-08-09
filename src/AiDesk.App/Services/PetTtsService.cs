@@ -12,26 +12,69 @@ namespace AiDesk.App.Services;
 /// </summary>
 public static class PetTtsService
 {
-    /// <summary>可选音色列表（Id 写入配置；edge-tts 神经网络语音，SAPI 离线兜底）。</summary>
-    public static readonly (string Id, string Name)[] Voices =
+    /// <summary>音色选项（按语言分组展示；edge-tts 神经网络语音，SAPI 离线兜底）。</summary>
+    public sealed record VoiceOption(string Language, string Id, string Name);
+
+    /// <summary>可选音色列表（Id 写入配置；全部 edge-tts 免费可用，无 key）。</summary>
+    public static readonly VoiceOption[] Voices =
     {
-        ("edge:zh-CN-XiaoxiaoNeural", "晓晓 · 女声 温柔"),
-        ("edge:zh-CN-XiaoyiNeural", "晓伊 · 女声 活泼"),
-        ("edge:zh-CN-XiaochenNeural", "晓辰 · 女声 新闻"),
-        ("edge:zh-CN-XiaoshuangNeural", "晓双 · 女声 儿童"),
-        ("edge:zh-CN-liaoning-XiaobeiNeural", "晓北 · 女声 东北"),
-        ("edge:zh-CN-shaanxi-XiaoniNeural", "晓妮 · 女声 陕西"),
-        ("edge:zh-CN-YunxiNeural", "云希 · 男声 阳光"),
-        ("edge:zh-CN-YunjianNeural", "云健 · 男声 浑厚"),
-        ("edge:zh-CN-YunyangNeural", "云扬 · 男声 播音"),
-        ("edge:zh-CN-YunxiaNeural", "云夏 · 男声 少年"),
-        ("edge:zh-CN-henan-YundengNeural", "云登 · 男声 河南"),
-        ("edge:zh-TW-HsiaoChenNeural", "曉臻 · 女声 台湾"),
-        ("edge:zh-TW-YunJheNeural", "雲哲 · 男声 台湾"),
-        ("edge:zh-HK-HiuGaaiNeural", "曉佳 · 女声 粤语"),
-        ("edge:zh-HK-WanLungNeural", "雲龍 · 男声 粤语"),
-        ("edge:en-US-AriaNeural", "Aria · 英语 女声"),
-        ("sapi:zh-CN", "系统语音 · 离线"),
+        // ---- 中文 ----
+        new("中文", "edge:zh-CN-XiaoxiaoNeural", "晓晓 · 女 温柔"),
+        new("中文", "edge:zh-CN-XiaoyiNeural", "晓伊 · 女 活泼"),
+        new("中文", "edge:zh-CN-XiaochenNeural", "晓辰 · 女 新闻"),
+        new("中文", "edge:zh-CN-XiaoshuangNeural", "晓双 · 女 儿童"),
+        new("中文", "edge:zh-CN-XiaohanNeural", "晓涵 · 女 温暖"),
+        new("中文", "edge:zh-CN-XiaomengNeural", "晓萌 · 女 可爱"),
+        new("中文", "edge:zh-CN-XiaomoNeural", "晓墨 · 女 解说"),
+        new("中文", "edge:zh-CN-XiaoruiNeural", "晓睿 · 女 成熟"),
+        new("中文", "edge:zh-CN-XiaoxuanNeural", "晓萱 · 女 知性"),
+        new("中文", "edge:zh-CN-XiaoyouNeural", "晓悠 · 女 柔和"),
+        new("中文", "edge:zh-CN-liaoning-XiaobeiNeural", "晓北 · 女 东北"),
+        new("中文", "edge:zh-CN-shaanxi-XiaoniNeural", "晓妮 · 女 陕西"),
+        new("中文", "edge:zh-CN-YunxiNeural", "云希 · 男 阳光"),
+        new("中文", "edge:zh-CN-YunjianNeural", "云健 · 男 浑厚"),
+        new("中文", "edge:zh-CN-YunyangNeural", "云扬 · 男 播音"),
+        new("中文", "edge:zh-CN-YunxiaNeural", "云夏 · 男 少年"),
+        new("中文", "edge:zh-CN-YunfengNeural", "云枫 · 男 沉稳"),
+        new("中文", "edge:zh-CN-YunhaoNeural", "云皓 · 男 磁性"),
+        new("中文", "edge:zh-CN-YunzeNeural", "云泽 · 男 青年"),
+        new("中文", "edge:zh-CN-YunyeNeural", "云野 · 男 阳光"),
+        new("中文", "edge:zh-CN-henan-YundengNeural", "云登 · 男 河南"),
+        // ---- 台湾 ----
+        new("台湾", "edge:zh-TW-HsiaoChenNeural", "曉臻 · 女"),
+        new("台湾", "edge:zh-TW-HsiaoYuNeural", "曉雨 · 女 溫暖"),
+        new("台湾", "edge:zh-TW-YunJheNeural", "雲哲 · 男"),
+        // ---- 粤语 ----
+        new("粤语", "edge:zh-HK-HiuGaaiNeural", "曉佳 · 女"),
+        new("粤语", "edge:zh-HK-WanLungNeural", "雲龍 · 男"),
+        new("粤语", "edge:zh-HK-HiuMaanNeural", "曉曼 · 女"),
+        // ---- 英语 ----
+        new("英语", "edge:en-US-AriaNeural", "Aria · 美 女"),
+        new("英语", "edge:en-US-JennyNeural", "Jenny · 美 女"),
+        new("英语", "edge:en-US-GuyNeural", "Guy · 美 男"),
+        new("英语", "edge:en-US-ChristopherNeural", "Christopher · 美 男"),
+        new("英语", "edge:en-GB-SoniaNeural", "Sonia · 英 女"),
+        new("英语", "edge:en-GB-RyanNeural", "Ryan · 英 男"),
+        new("英语", "edge:en-AU-NatashaNeural", "Natasha · 澳 女"),
+        // ---- 日语 ----
+        new("日语", "edge:ja-JP-NanamiNeural", "奈奈美 · 女"),
+        new("日语", "edge:ja-JP-KeitaNeural", "启太 · 男"),
+        // ---- 韩语 ----
+        new("韩语", "edge:ko-KR-SunHiNeural", "선희 · 女"),
+        new("韩语", "edge:ko-KR-InJoonNeural", "인준 · 男"),
+        // ---- 法语 ----
+        new("法语", "edge:fr-FR-DeniseNeural", "Denise · 女"),
+        new("法语", "edge:fr-FR-HenriNeural", "Henri · 男"),
+        // ---- 德语 ----
+        new("德语", "edge:de-DE-KatjaNeural", "Katja · 女"),
+        new("德语", "edge:de-DE-ConradNeural", "Conrad · 男"),
+        // ---- 西班牙语 ----
+        new("西班牙语", "edge:es-ES-ElviraNeural", "Elvira · 女"),
+        new("西班牙语", "edge:es-MX-DaliaNeural", "Dalia · 墨 女"),
+        // ---- 俄语 ----
+        new("俄语", "edge:ru-RU-SvetlanaNeural", "Svetlana · 女"),
+        // ---- 系统 ----
+        new("系统", "sapi:zh-CN", "系统语音 · 离线"),
     };
 
     private static MediaPlayer? _player;

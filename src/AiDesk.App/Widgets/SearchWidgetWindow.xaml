@@ -382,9 +382,20 @@
                 <Grid Margin="16,6,16,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="宠物音色" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
-                        <ComboBox x:Name="VoiceBox" Margin="8,0,0,0" Width="200" Height="26" FontSize="11"
+                        <ComboBox x:Name="VoiceBox" Margin="8,0,0,0" Width="230" Height="26" FontSize="11"
                                   DisplayMemberPath="Name" SelectedValuePath="Id"
-                                  SelectionChanged="OnVoiceChanged" />
+                                  SelectionChanged="OnVoiceChanged">
+                            <ComboBox.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Name}" FontSize="10.5" FontWeight="SemiBold"
+                                                       Foreground="#5F6368" Margin="2,3,0,1" />
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </ComboBox.GroupStyle>
+                        </ComboBox>
                         <Button Content="试听" Margin="8,0,0,0" FontSize="11" Padding="10,4"
                                 Background="#FFEFF1F3" Foreground="#0067C0" BorderThickness="0"
                                 Cursor="Hand" Click="OnVoicePreviewClick" />
