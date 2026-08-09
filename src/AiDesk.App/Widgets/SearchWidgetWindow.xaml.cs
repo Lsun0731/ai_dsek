@@ -45,12 +45,20 @@ public partial class SearchWidgetWindow : WidgetWindowBase
                 .ToList();
 
         SearchList.ItemsSource = results;
-        SearchList.Visibility = !string.IsNullOrEmpty(query)
+        var hasQuery = !string.IsNullOrEmpty(query);
+        SearchList.Visibility = hasQuery ? Visibility.Visible : Visibility.Collapsed;
+        EmptyText.Visibility = hasQuery && results.Count == 0
             ? Visibility.Visible : Visibility.Collapsed;
-        ClipTitle.Visibility = string.IsNullOrEmpty(query)
-            ? Visibility.Visible : Visibility.Collapsed;
-        EmptyText.Visibility = !string.IsNullOrEmpty(query) && results.Count == 0
-            ? Visibility.Visible : Visibility.Collapsed;
+
+        // 剪贴板区仅在无搜索词时显示（避免残留）
+        var clipVisible = !hasQuery;
+        ClipTitle.Visibility = clipVisible ? Visibility.Visible : Visibility.Collapsed;
+        ClipList.Visibility = clipVisible ? Visibility.Visible : Visibility.Collapsed;
+        if (clipVisible)
+            ClipEmpty.Visibility = _clipboard.History.Count == 0
+                ? Visibility.Visible : Visibility.Collapsed;
+        else
+            ClipEmpty.Visibility = Visibility.Collapsed;
     }
 
     private void OnSearchKeyDown(object sender, KeyEventArgs e)
@@ -59,9 +67,9 @@ public partial class SearchWidgetWindow : WidgetWindowBase
             LaunchApp((StartMenuApp)SearchList.Items[0]);
     }
 
-    private void OnSearchResultDoubleClick(object sender, MouseButtonEventArgs e)
+    private void OnSearchResultClick(object sender, RoutedEventArgs e)
     {
-        if (SearchList.SelectedItem is StartMenuApp app)
+        if (sender is FrameworkElement { Tag: StartMenuApp app })
             LaunchApp(app);
     }
 
@@ -87,7 +95,10 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         Dispatcher.Invoke(() =>
         {
             ClipList.ItemsSource = items.Take(8).ToList();
-            ClipEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            // 搜索状态下剪贴板区整体隐藏，勿改空态提示
+            var hasQuery = !string.IsNullOrEmpty(SearchBox.Text.Trim());
+            if (!hasQuery)
+                ClipEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         });
     }
 

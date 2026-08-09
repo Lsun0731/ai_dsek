@@ -28,8 +28,68 @@ public partial class PetWidgetWindow : WidgetWindowBase
         ShowGreeting();
     }
 
-    /// <summary>宠物禁用拖动（点击=聊天，避免拖/点冲突）。</summary>
+    /// <summary>宠物禁用基类 DragMove（点击=聊天，拖动用手动位移实现，避免拖/点冲突）。</summary>
     protected override bool ShouldDrag(System.Windows.Input.MouseButtonEventArgs e) => false;
+
+    // ---- 拖动 + 点击区分（按下/抬起位移判断） ----
+
+    private Point _dragStartScreen;
+    private Point _winStart;
+    private bool _down;
+    private bool _dragging;
+
+    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        _down = true;
+        _dragging = false;
+        _dragStartScreen = e.GetPosition(null);
+        _winStart = new Point(Left, Top);
+        CaptureMouse();
+        base.OnMouseLeftButtonDown(e);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        if (_down && e.LeftButton == MouseButtonState.Pressed)
+        {
+            var cur = e.GetPosition(null);
+            if (!_dragging &&
+                (Math.Abs(cur.X - _dragStartScreen.X) > 5 || Math.Abs(cur.Y - _dragStartScreen.Y) > 5))
+                _dragging = true;
+            if (_dragging)
+            {
+                Left = _winStart.X + (cur.X - _dragStartScreen.X);
+                Top = _winStart.Y + (cur.Y - _dragStartScreen.Y);
+            }
+        }
+        base.OnMouseMove(e);
+    }
+
+    protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+    {
+        if (_down)
+        {
+            _down = false;
+            ReleaseMouseCapture();
+            if (!_dragging)
+                ToggleChat();
+        }
+        base.OnMouseLeftButtonUp(e);
+    }
+
+    private void ToggleChat()
+    {
+        if (_thinking)
+            return;
+        _chatMode = !_chatMode;
+        InputPanel.Visibility = _chatMode ? Visibility.Visible : Visibility.Collapsed;
+        BubbleText.Visibility = _chatMode ? Visibility.Collapsed : Visibility.Visible;
+        Bubble.Visibility = Visibility.Visible;
+        if (_chatMode)
+            InputBox.Focus();
+        else
+            ShowGreeting();
+    }
 
     private void LoadFrames()
     {
@@ -70,24 +130,6 @@ public partial class PetWidgetWindow : WidgetWindowBase
     }
 
     // ---- 点击互动 ----
-
-    private void OnPetBodyClick(object sender, MouseButtonEventArgs e)
-    {
-        if (_thinking)
-            return;
-        _chatMode = !_chatMode;
-        InputPanel.Visibility = _chatMode ? Visibility.Visible : Visibility.Collapsed;
-        BubbleText.Visibility = _chatMode ? Visibility.Collapsed : Visibility.Visible;
-        Bubble.Visibility = Visibility.Visible;
-        if (_chatMode)
-        {
-            InputBox.Focus();
-        }
-        else
-        {
-            ShowGreeting();
-        }
-    }
 
     private void OnInputKeyDown(object sender, KeyEventArgs e)
     {
