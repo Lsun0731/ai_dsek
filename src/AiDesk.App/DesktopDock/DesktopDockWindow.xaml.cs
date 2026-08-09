@@ -199,5 +199,7 @@ public partial class DesktopDockWindow : Window
         _media.TrackChanged -= OnTrackChanged;
         _media.PlaybackChanged -= OnPlaybackChanged;
         _media.Dispose();
+        // 连带关闭 Dock 弹出的搜索浮层，避免禁用 Dock 后浮层残留
+        _searchOverlay?.Close();
     }
 }
