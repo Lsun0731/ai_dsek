@@ -66,13 +66,32 @@
             </Style>
 
             <!-- ===== 桌面小组件样式 ===== -->
-            <!-- 小组件卡片：半透明深色毛玻璃感 -->
+            <!-- 小组件卡片：现代渐变玻璃（半透明深蓝渐变 + 高光边框 + 阴影） -->
             <Style x:Key="WidgetCard" TargetType="Border">
-                <Setter Property="Background" Value="#D914181C" />
                 <Setter Property="CornerRadius" Value="18" />
-                <Setter Property="BorderBrush" Value="#26FFFFFF" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Padding" Value="18,16" />
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#E6212B3D" Offset="0" />
+                            <GradientStop Color="#CC10161F" Offset="1" />
+                        </LinearGradientBrush>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="BorderBrush">
+                    <Setter.Value>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#66FFFFFF" Offset="0" />
+                            <GradientStop Color="#22FFFFFF" Offset="1" />
+                        </LinearGradientBrush>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Opacity="0.3" Color="#000000" />
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <!-- 小组件进度条（圆角轨道 + 圆角填充） -->

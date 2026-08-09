@@ -27,8 +27,6 @@ public partial class MainViewModel : ObservableObject
         NavItems.Add(new NavItem("桌面 Dock", "\uE7C4", new DesktopDockViewModel()));
         NavItems.Add(new NavItem("桌面小组件", "\uE823", new WidgetViewModel()));
         NavItems.Add(new NavItem("外观美化", "\uE7B8", new DesktopViewModel()));
-        NavItems.Add(new NavItem("任务栏美化", "\uE771", new TaskbarViewModel()));
-        NavItems.Add(new NavItem("光标主题", "\uE771", new CursorThemeViewModel()));
 
         // ===== 系统清理（扩展） =====
         NavItems.Add(new NavItem("系统清理", null, isGroup: true));
