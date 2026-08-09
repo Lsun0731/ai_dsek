@@ -482,3 +482,13 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# ===== AiDesk 项目自定义 =====
+# 取消 dotnet 模板 *.app 规则对本项目目录（src/AiDesk.App）的误伤
+
+# Reasonix 运行时元数据（本机会话/任务记录），不进版本库
+.reasonix/
+!src/AiDesk.App/
+!src/AiDesk.App/*.csproj
+!src/AiDesk.App/*.xaml
+!src/AiDesk.App/*.cs
