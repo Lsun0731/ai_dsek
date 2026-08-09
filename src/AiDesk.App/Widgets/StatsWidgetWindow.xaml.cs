@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Media;
 using AiDesk.Core.Diagnostics;
 using AiDesk.Core.Widgets;
@@ -56,12 +55,6 @@ public partial class StatsWidgetWindow : WidgetWindowBase
 
     private static string FormatRate(double kbPerSec) =>
         kbPerSec >= 1024 ? $"{kbPerSec / 1024:F1} MB/s" : $"{kbPerSec:F0} KB/s";
-
-    private void OnDrag(object sender, MouseButtonEventArgs e)
-    {
-        if (e.LeftButton == MouseButtonState.Pressed)
-            DragMove();
-    }
 
     protected override void OnClosed(EventArgs e)
     {

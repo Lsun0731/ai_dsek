@@ -119,9 +119,8 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        // ToList 防止 Close 触发 Closed→Remove 导致迭代期修改集合
-        foreach (var window in _windows.Values.ToList())
-            window.Close();
+        // 不 Close 窗口：应用退出时窗口随进程销毁，避免 OnClosing 把 IsOpen 覆写回 false
+        // （那样「重启恢复已打开的小组件」会失效）；用户手动点 ✕ 关闭才走 OnClosing 落盘关闭状态。
         _windows.Clear();
         GC.SuppressFinalize(this);
     }

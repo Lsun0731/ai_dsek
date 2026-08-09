@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Input;
 using AiDesk.Core.Diagnostics;
 
 namespace AiDesk.App.Widgets;
@@ -31,10 +30,4 @@ public partial class DateWidgetWindow : WidgetWindowBase
         DayOfWeek.Saturday => "星期六",
         _ => "星期日",
     };
-
-    private void OnDrag(object sender, MouseButtonEventArgs e)
-    {
-        if (e.LeftButton == MouseButtonState.Pressed)
-            DragMove();
-    }
 }

@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Input;
 using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
 using AiDesk.Core.Weather;
@@ -67,12 +66,6 @@ public partial class WeatherWidgetWindow : WidgetWindowBase
     }
 
     private void OnRefreshClicked(object sender, RoutedEventArgs e) => RefreshAsync();
-
-    private void OnDrag(object sender, MouseButtonEventArgs e)
-    {
-        if (e.LeftButton == MouseButtonState.Pressed)
-            DragMove();
-    }
 
     protected override void OnClosed(EventArgs e)
     {
