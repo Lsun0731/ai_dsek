@@ -35,6 +35,13 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         _startMenuApps = StartMenuAppsProvider.Scan();
         RefreshClipboard();
         StartTickerMs(1000); // 剪贴板历史每秒刷新
+
+        // 失焦自动隐藏（点击面板外任意处即关闭，类似 Spotlight）
+        Deactivated += (_, _) =>
+        {
+            if (IsLoaded)
+                Close();
+        };
     }
 
     protected override void OnWidgetLoaded() => SearchBox.Focus();

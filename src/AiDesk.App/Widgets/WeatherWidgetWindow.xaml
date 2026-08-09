@@ -9,9 +9,9 @@
             <StackPanel>
                 <Grid>
                     <TextBlock x:Name="CityText" Text="北京" FontSize="13" FontWeight="SemiBold"
-                               Foreground="#CCFFFFFF" VerticalAlignment="Center" />
+                               Foreground="#202124" VerticalAlignment="Center" />
                     <Button x:Name="RefreshBtn" Content="⟳" Width="24" Height="24" FontSize="12"
-                            HorizontalAlignment="Right" Background="Transparent" Foreground="#8AFFFFFF"
+                            HorizontalAlignment="Right" Background="Transparent" Foreground="#5F6368"
                             BorderThickness="0" Cursor="Hand" Click="OnRefreshClicked" ToolTip="刷新天气" />
                 </Grid>
 
@@ -22,18 +22,18 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="IconText" Text="⛅" FontSize="30" VerticalAlignment="Center" Margin="0,0,12,0" />
                     <StackPanel Grid.Column="1">
-                        <TextBlock x:Name="TempText" Text="--°" FontSize="32" FontWeight="Light" Foreground="White"
+                        <TextBlock x:Name="TempText" Text="--°" FontSize="32" FontWeight="Light" Foreground="#202124"
                                    FontFamily="Segoe UI Light, Microsoft YaHei UI" />
-                        <TextBlock x:Name="DescText" Text="加载中…" FontSize="12" Foreground="#B0FFFFFF" Margin="0,2,0,0" />
+                        <TextBlock x:Name="DescText" Text="加载中…" FontSize="12" Foreground="#5F6368" Margin="0,2,0,0" />
                     </StackPanel>
                 </Grid>
 
                 <TextBlock x:Name="DetailText" Text="湿度 --% · 风 -- km/h · 今日 -- ~ --°"
-                           FontSize="11" Foreground="#99FFFFFF" TextWrapping="Wrap" />
+                           FontSize="11" Foreground="#80868B" TextWrapping="Wrap" />
             </StackPanel>
             <Button Content="✕" Width="20" Height="20" FontSize="9" HorizontalAlignment="Right"
                     VerticalAlignment="Top" Margin="0,-8,-8,0" Background="Transparent"
-                    Foreground="#66FFFFFF" BorderThickness="0" Cursor="Hand"
+                    Foreground="#80868B" BorderThickness="0" Cursor="Hand"
                     Click="OnCloseClicked" ToolTip="关闭小组件" />
         </Grid>
     </Border>

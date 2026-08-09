@@ -68,28 +68,25 @@
             <!-- ===== 桌面小组件样式 ===== -->
             <!-- 小组件卡片：现代渐变玻璃（半透明深蓝渐变 + 高光边框 + 阴影） -->
             <Style x:Key="WidgetCard" TargetType="Border">
-                <Setter Property="CornerRadius" Value="18" />
+                <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Padding" Value="18,16" />
+                <Setter Property="Padding" Value="16,14" />
                 <Setter Property="Background">
                     <Setter.Value>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#E6212B3D" Offset="0" />
-                            <GradientStop Color="#CC10161F" Offset="1" />
+                            <GradientStop Color="#FFF8F8F8" Offset="0" />
+                            <GradientStop Color="#FFEDEFF2" Offset="1" />
                         </LinearGradientBrush>
                     </Setter.Value>
                 </Setter>
                 <Setter Property="BorderBrush">
                     <Setter.Value>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#66FFFFFF" Offset="0" />
-                            <GradientStop Color="#22FFFFFF" Offset="1" />
-                        </LinearGradientBrush>
+                        <SolidColorBrush Color="#16000000" />
                     </Setter.Value>
                 </Setter>
                 <Setter Property="Effect">
                     <Setter.Value>
-                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Direction="270" Opacity="0.3" Color="#000000" />
+                        <DropShadowEffect BlurRadius="18" ShadowDepth="2" Direction="270" Opacity="0.16" Color="#000000" />
                     </Setter.Value>
                 </Setter>
             </Style>
@@ -97,8 +94,8 @@
             <!-- 小组件进度条（圆角轨道 + 圆角填充） -->
             <Style x:Key="WidgetProgressBar" TargetType="ProgressBar">
                 <Setter Property="Height" Value="6" />
-                <Setter Property="Background" Value="#33FFFFFF" />
-                <Setter Property="Foreground" Value="#5B8DF5" />
+                <Setter Property="Background" Value="#1C000000" />
+                <Setter Property="Foreground" Value="#0067C0" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ProgressBar">

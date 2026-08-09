@@ -7,14 +7,14 @@
     <Border Style="{StaticResource WidgetCard}">
         <Grid>
             <StackPanel>
-                <TextBlock x:Name="WeekText" Text="星期日" FontSize="14" Foreground="#CCFFFFFF" />
-                <TextBlock x:Name="DateText" Text="8月9日" FontSize="32" FontWeight="Light" Foreground="White"
+                <TextBlock x:Name="WeekText" Text="星期日" FontSize="14" Foreground="#3C4043" />
+                <TextBlock x:Name="DateText" Text="8月9日" FontSize="32" FontWeight="Light" Foreground="#202124"
                            FontFamily="Segoe UI Light, Microsoft YaHei UI" Margin="0,4,0,0" />
-                <TextBlock x:Name="YearText" Text="2026年" FontSize="12" Foreground="#99FFFFFF" Margin="0,4,0,0" />
+                <TextBlock x:Name="YearText" Text="2026年" FontSize="12" Foreground="#80868B" Margin="0,4,0,0" />
             </StackPanel>
             <Button Content="✕" Width="20" Height="20" FontSize="9" HorizontalAlignment="Right"
                     VerticalAlignment="Top" Margin="0,-8,-8,0" Background="Transparent"
-                    Foreground="#66FFFFFF" BorderThickness="0" Cursor="Hand"
+                    Foreground="#80868B" BorderThickness="0" Cursor="Hand"
                     Click="OnCloseClicked" ToolTip="关闭小组件" />
         </Grid>
     </Border>

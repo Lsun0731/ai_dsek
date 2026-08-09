@@ -7,7 +7,7 @@
     <Border Style="{StaticResource WidgetCard}">
         <Grid>
             <StackPanel>
-                <TextBlock Text="⚡ 系统状态" FontSize="12" FontWeight="SemiBold" Foreground="#B0FFFFFF"
+                <TextBlock Text="⚡ 系统状态" FontSize="12" FontWeight="SemiBold" Foreground="#202124"
                            Margin="0,0,0,12" />
 
             <!-- CPU -->
@@ -17,10 +17,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="44" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="CPU" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
+                <TextBlock Text="CPU" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
                 <ProgressBar Grid.Column="1" x:Name="CpuBar" Style="{StaticResource WidgetProgressBar}"
                              VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" x:Name="CpuText" Text="--%" FontSize="11" Foreground="White"
+                <TextBlock Grid.Column="2" x:Name="CpuText" Text="--%" FontSize="11" Foreground="#202124"
                            TextAlignment="Right" VerticalAlignment="Center" />
             </Grid>
 
@@ -31,10 +31,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="44" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="内存" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
+                <TextBlock Text="内存" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
                 <ProgressBar Grid.Column="1" x:Name="MemBar" Style="{StaticResource WidgetProgressBar}"
                              VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" x:Name="MemText" Text="--%" FontSize="11" Foreground="White"
+                <TextBlock Grid.Column="2" x:Name="MemText" Text="--%" FontSize="11" Foreground="#202124"
                            TextAlignment="Right" VerticalAlignment="Center" />
             </Grid>
 
@@ -45,10 +45,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="44" />
                 </Grid.ColumnDefinitions>
-                <TextBlock x:Name="DiskName" Text="C:" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
+                <TextBlock x:Name="DiskName" Text="C:" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
                 <ProgressBar Grid.Column="1" x:Name="DiskBar" Style="{StaticResource WidgetProgressBar}"
                              VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" x:Name="DiskText" Text="--%" FontSize="11" Foreground="White"
+                <TextBlock Grid.Column="2" x:Name="DiskText" Text="--%" FontSize="11" Foreground="#202124"
                            TextAlignment="Right" VerticalAlignment="Center" />
             </Grid>
 
@@ -58,16 +58,16 @@
                     <ColumnDefinition Width="44" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="网络" FontSize="11" Foreground="#A8FFFFFF" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" x:Name="NetText" Text="↓ --  ↑ --" FontSize="11" Foreground="#CCFFFFFF"
+                <TextBlock Text="网络" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" x:Name="NetText" Text="↓ --  ↑ --" FontSize="11" Foreground="#3C4043"
                            TextAlignment="Right" VerticalAlignment="Center" />
             </Grid>
 
-            <TextBlock x:Name="MemDetail" Text="" FontSize="10" Foreground="#80FFFFFF" Margin="0,8,0,0" />
+            <TextBlock x:Name="MemDetail" Text="" FontSize="10" Foreground="#80868B" Margin="0,8,0,0" />
             </StackPanel>
             <Button Content="✕" Width="20" Height="20" FontSize="9" HorizontalAlignment="Right"
                     VerticalAlignment="Top" Margin="0,-8,-8,0" Background="Transparent"
-                    Foreground="#66FFFFFF" BorderThickness="0" Cursor="Hand"
+                    Foreground="#80868B" BorderThickness="0" Cursor="Hand"
                     Click="OnCloseClicked" ToolTip="关闭小组件" />
         </Grid>
     </Border>
