@@ -86,8 +86,15 @@ public class WeatherServiceTests
     [InlineData("雾", "🌫️")]
     [InlineData("阴", "☁️")]
     [InlineData("晴", "☀️")]
-    [InlineData("多云", "☁️")]
+    [InlineData("多云", "⛅")]
     [InlineData("未知描述", "🌡️")]
+    [InlineData("Sunny", "☀️")]
+    [InlineData("Light rain", "🌧️")]
+    [InlineData("Partly cloudy", "⛅")]
+    [InlineData("Overcast", "☁️")]
+    [InlineData("Thunderstorm", "⛈️")]
+    [InlineData("Light snow", "❄️")]
+    [InlineData("Mist", "🌫️")]
     public void MapIcon_描述映射emoji(string description, string expected)
     {
         Assert.Equal(expected, WeatherInfo.MapIcon(description));

@@ -1,5 +1,7 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
@@ -11,10 +13,21 @@ namespace AiDesk.App.Widgets;
 /// </summary>
 public abstract class WidgetWindowBase : Window
 {
+    // 窗口扩展样式：工具窗口（不进 Alt+Tab），与 WS_EX_APPWINDOW 互斥
+    private const int GWL_EXSTYLE = -20;
+    private const int WS_EX_TOOLWINDOW = 0x00000080;
+    private const int WS_EX_APPWINDOW = 0x00040000;
+
     private readonly WidgetKind _kind;
     private readonly WidgetState _state;
     private readonly WidgetSettings _settings;
     private DispatcherTimer? _ticker;
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
     protected WidgetWindowBase(WidgetKind kind)
     {
@@ -30,9 +43,27 @@ public abstract class WidgetWindowBase : Window
         ResizeMode = ResizeMode.NoResize;
         Opacity = _settings.Opacity;
 
+        SourceInitialized += OnSourceInitialized;
         MouseLeftButtonDown += OnDrag;
         Loaded += OnLoaded;
         Closing += OnClosing;
+    }
+
+    /// <summary>窗口句柄就绪后，设为工具窗口样式：不出现在 Alt+Tab 切换列表。</summary>
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+            exStyle |= WS_EX_TOOLWINDOW;
+            exStyle &= ~WS_EX_APPWINDOW;
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(exStyle));
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Widget." + _kind + ".WindowStyle", ex);
+        }
     }
 
     /// <summary>子类实现：定时刷新内容（首次加载也会调用）。</summary>

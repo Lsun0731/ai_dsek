@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:widgets="clr-namespace:AiDesk.App.Widgets"
-        Title="系统状态" Width="248"
+        Title="系统状态" Width="248" SizeToContent="Height"
         MouseLeftButtonDown="OnDrag">
 
     <Border Style="{StaticResource WidgetCard}" MouseLeftButtonDown="OnDrag">

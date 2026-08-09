@@ -20,14 +20,14 @@ public sealed record WeatherInfo(
 
     public static string MapIcon(string description)
     {
-        var d = description;
-        if (d.Contains("雷")) return "⛈️";
-        if (d.Contains("雪") || d.Contains("冰")) return "❄️";
-        if (d.Contains("雨")) return d.Contains("阵") ? "🌦️" : "🌧️";
-        if (d.Contains("雾") || d.Contains("霾") || d.Contains("烟")) return "🌫️";
-        if (d.Contains("阴") || d.Contains("多云")) return "☁️";
-        if (d.Contains("晴")) return "☀️";
-        if (d.Contains("云")) return "⛅";
+        var d = description.ToLowerInvariant();
+        if (d.Contains("雷") || d.Contains("thunder") || d.Contains("storm")) return "⛈️";
+        if (d.Contains("雪") || d.Contains("冰") || d.Contains("snow") || d.Contains("blizzard") || d.Contains("sleet")) return "❄️";
+        if (d.Contains("雨") || d.Contains("rain") || d.Contains("drizzle") || d.Contains("shower") || d.Contains("precipitation")) return d.Contains("阵") || d.Contains("shower") ? "🌦️" : "🌧️";
+        if (d.Contains("雾") || d.Contains("霾") || d.Contains("烟") || d.Contains("fog") || d.Contains("mist") || d.Contains("haze")) return "🌫️";
+        if (d.Contains("阴") || d.Contains("overcast")) return "☁️";
+        if (d.Contains("晴") || d.Contains("clear") || d.Contains("sunny")) return "☀️";
+        if (d.Contains("云") || d.Contains("cloud")) return "⛅";
         return "🌡️";
     }
 }
