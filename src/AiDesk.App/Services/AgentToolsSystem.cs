@@ -34,8 +34,29 @@ public static partial class AgentTools
         "toggle_mute" => ExecuteToggleMute(),
         "screenshot" => ExecuteScreenshot(),
         "clear_temp" => ExecuteClearTemp(),
+        "open_search_panel" => OpenSearchPanel(),
+        "open_clipboard" => OpenClipboard(),
+        "open_main_window" => OpenMainWindow(),
         _ => $"未知工具: {name}",
     };
+
+    private static string OpenSearchPanel()
+    {
+        AppActions.OpenSearchPanel();
+        return "已打开 AiDesk 搜索面板";
+    }
+
+    private static string OpenClipboard()
+    {
+        AppActions.OpenClipboard();
+        return "已打开 AiDesk 剪贴板面板";
+    }
+
+    private static string OpenMainWindow()
+    {
+        AppActions.ShowMainWindow();
+        return "已打开 AiDesk 主窗口";
+    }
 
     private static string GetSystemInfo()
     {

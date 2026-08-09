@@ -110,6 +110,26 @@ public static partial class AgentTools
             ParametersJsonSchema = """{"type":"object","properties":{}}""",
         },
 
+        // ---- AiDesk 应用联动 ----
+        new AITool
+        {
+            Name = "open_search_panel",
+            Description = "打开 AiDesk 自己的搜索面板（搜索应用）。",
+            ParametersJsonSchema = """{"type":"object","properties":{}}""",
+        },
+        new AITool
+        {
+            Name = "open_clipboard",
+            Description = "打开 AiDesk 剪贴板面板（历史记录）。",
+            ParametersJsonSchema = """{"type":"object","properties":{}}""",
+        },
+        new AITool
+        {
+            Name = "open_main_window",
+            Description = "打开 AiDesk 主窗口（工具箱）。",
+            ParametersJsonSchema = """{"type":"object","properties":{}}""",
+        },
+
         // ---- 危险（需用户确认） ----
         new AITool
         {

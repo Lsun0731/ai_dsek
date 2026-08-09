@@ -80,6 +80,9 @@ public partial class App : Application
             _mainWindow.WindowState = WindowState.Normal;
     }
 
+    /// <summary>Agent 联动入口：显示主窗口。</summary>
+    public void ShowMainWindowFromAgent() => ShowMainWindow();
+
     /// <summary>热键/托盘呼出搜索小组件。</summary>
     private void ToggleSearchWidget()
     {
