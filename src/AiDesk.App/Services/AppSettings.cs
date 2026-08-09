@@ -1,3 +1,5 @@
+using AiDesk.Core.AI;
+
 namespace AiDesk.App.Services;
 
 /// <summary>小组件类型。</summary>
@@ -17,6 +19,9 @@ public enum WidgetKind
 
     /// <summary>应用搜索（启动开始菜单应用）</summary>
     Search,
+
+    /// <summary>桌面宠物（程序化角色 + AI 对话联动）</summary>
+    Pet,
 }
 
 /// <summary>单个小组件的持久化状态。</summary>
@@ -38,6 +43,9 @@ public sealed class AppSettings
 
     /// <summary>各小组件状态（按类型名）。</summary>
     public Dictionary<string, WidgetState> Widgets { get; set; } = new();
+
+    /// <summary>AI 对话配置（宠物联动用）。</summary>
+    public AIChatSettings AI { get; set; } = new();
 
     public WidgetState GetState(WidgetKind kind)
     {

@@ -86,7 +86,7 @@
                     </Grid>
 
                     <!-- 应用搜索 -->
-                    <Grid>
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -97,6 +97,20 @@
                         </StackPanel>
                         <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
                                       IsChecked="{Binding SearchOpen}" />
+                    </Grid>
+
+                    <!-- 桌面宠物 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="🐱 桌面宠物" FontSize="14" />
+                            <TextBlock Text="程序化小猫 · 点击聊天（AI 联动）" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
+                                      IsChecked="{Binding PetOpen}" />
                     </Grid>
                 </StackPanel>
             </Border>
@@ -111,6 +125,15 @@
                     <TextBlock Text="天气城市" FontSize="13" Foreground="#4A515B" Margin="0,0,0,6" />
                     <TextBox Text="{Binding WeatherCity}"
                              Height="34" VerticalContentAlignment="Center" Padding="10,0" />
+
+                    <!-- AI 对话配置 -->
+                    <TextBlock Text="AI 对话配置（桌面宠物联动）" FontSize="13" Foreground="#4A515B" Margin="0,18,0,6" />
+                    <TextBlock Text="API 地址" FontSize="11" Foreground="#8A9099" Margin="0,0,0,4" />
+                    <TextBox Text="{Binding AiBaseUrl}" Height="32" VerticalContentAlignment="Center" Padding="8,0" />
+                    <TextBlock Text="API Key" FontSize="11" Foreground="#8A9099" Margin="0,8,0,4" />
+                    <TextBox Text="{Binding AiApiKey}" Height="32" VerticalContentAlignment="Center" Padding="8,0" />
+                    <TextBlock Text="模型" FontSize="11" Foreground="#8A9099" Margin="0,8,0,4" />
+                    <TextBox Text="{Binding AiModel}" Height="32" VerticalContentAlignment="Center" Padding="8,0" />
 
                     <TextBlock Text="透明度" FontSize="13" Foreground="#4A515B" Margin="0,18,0,4" />
                     <Grid>

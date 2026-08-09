@@ -28,6 +28,18 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
     private bool _searchOpen;
 
     [ObservableProperty]
+    private bool _petOpen;
+
+    [ObservableProperty]
+    private string _aiBaseUrl = "https://api.openai.com/v1";
+
+    [ObservableProperty]
+    private string _aiApiKey = "";
+
+    [ObservableProperty]
+    private string _aiModel = "gpt-4o-mini";
+
+    [ObservableProperty]
     private double _widgetOpacity = 0.9;
 
     [ObservableProperty]
@@ -43,6 +55,25 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
         WeatherOpen = settings.GetState(WidgetKind.Weather).IsOpen;
         MusicOpen = settings.GetState(WidgetKind.Music).IsOpen;
         SearchOpen = settings.GetState(WidgetKind.Search).IsOpen;
+        PetOpen = settings.GetState(WidgetKind.Pet).IsOpen;
+
+        // AI 对话配置
+        _aiBaseUrl = settings.AI.BaseUrl;
+        _aiApiKey = settings.AI.ApiKey;
+        _aiModel = settings.AI.Model;
+    }
+
+    partial void OnAiBaseUrlChanged(string value) => SaveAI();
+    partial void OnAiApiKeyChanged(string value) => SaveAI();
+    partial void OnAiModelChanged(string value) => SaveAI();
+
+    private void SaveAI()
+    {
+        var settings = AppConfig.Load();
+        settings.AI.BaseUrl = AiBaseUrl;
+        settings.AI.ApiKey = AiApiKey;
+        settings.AI.Model = AiModel;
+        AppConfig.Save(settings);
     }
 
     private bool _suppressToggle;
@@ -74,7 +105,27 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
     partial void OnSearchOpenChanged(bool value)
     {
         if (!_suppressToggle)
-            ToggleWidget(WidgetKind.Search, value, () => new SearchWidgetWindow());
+        {
+            // 搜索面板的 AI 按钮 → 打开宠物对话
+            if (value)
+                ToggleWidgetWithAI(WidgetKind.Search, value, () => new SearchWidgetWindow());
+            else
+                ToggleWidget(WidgetKind.Search, false, () => new SearchWidgetWindow());
+        }
+    }
+
+    partial void OnPetOpenChanged(bool value)
+    {
+        if (!_suppressToggle)
+            ToggleWidget(WidgetKind.Pet, value, () => new PetWidgetWindow());
+    }
+
+    private void ToggleWidgetWithAI(WidgetKind kind, bool open, Func<WidgetWindowBase> factory)
+    {
+        var window = factory();
+        if (window is SearchWidgetWindow search)
+            search.AIRequested += () => ToggleWidget(WidgetKind.Pet, true, () => new PetWidgetWindow());
+        ToggleWidget(kind, open, factory, window);
     }
 
     /// <summary>热键 Ctrl+Alt+D 呼出/隐藏搜索小组件。</summary>
@@ -99,13 +150,13 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
             weather.RefreshNow();
     }
 
-    private void ToggleWidget(WidgetKind kind, bool open, Func<WidgetWindowBase> factory)
+    private void ToggleWidget(WidgetKind kind, bool open, Func<WidgetWindowBase> factory, WidgetWindowBase? prepared = null)
     {
         if (open)
         {
             if (_windows.ContainsKey(kind))
                 return;
-            var window = factory();
+            var window = prepared ?? factory();
             window.Closed += (_, _) =>
             {
                 _windows.Remove(kind);
@@ -138,6 +189,7 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
                 case WidgetKind.Weather: WeatherOpen = value; break;
                 case WidgetKind.Music: MusicOpen = value; break;
                 case WidgetKind.Search: SearchOpen = value; break;
+                case WidgetKind.Pet: PetOpen = value; break;
             }
         }
         finally

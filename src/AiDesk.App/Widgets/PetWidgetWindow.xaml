@@ -1,0 +1,83 @@
+<widgets:WidgetWindowBase x:Class="AiDesk.App.Widgets.PetWidgetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:widgets="clr-namespace:AiDesk.App.Widgets"
+        Title="桌面宠物" SizeToContent="WidthAndHeight"
+        Width="170" MouseLeftButtonDown="OnPetBodyClick">
+    <Grid>
+        <StackPanel HorizontalAlignment="Center">
+            <!-- 气泡（显示 AI 回复 / 输入框） -->
+            <Border x:Name="Bubble" Background="#F21A2332" CornerRadius="14" BorderBrush="#33FFFFFF"
+                    BorderThickness="1" Padding="12,10" Margin="0,0,0,8"
+                    MaxWidth="230" Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="BubbleText" Text="你好呀！点我聊天～" FontSize="12"
+                               Foreground="#E8ECF2" TextWrapping="Wrap" />
+                    <Grid x:Name="InputPanel" Visibility="Collapsed" Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="InputBox" FontSize="12" Foreground="#E8ECF2"
+                                 Background="#2AFFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"
+                                 Padding="8,5" VerticalContentAlignment="Center"
+                                 KeyDown="OnInputKeyDown" />
+                        <Button Grid.Column="1" Content="发送" FontSize="11" Margin="6,0,0,0"
+                                Background="#4C7CF3" Foreground="White" BorderThickness="0"
+                                Padding="10,5" Cursor="Hand" Click="OnSendClicked" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 程序化角色：圆润小猫 -->
+            <Grid x:Name="PetBody" Cursor="Hand" HorizontalAlignment="Center">
+                <!-- 耳朵 -->
+                <Ellipse Width="34" Height="30" Fill="#6C7CF3" Margin="-32,-26,0,0"
+                         HorizontalAlignment="Left" VerticalAlignment="Top" />
+                <Ellipse Width="34" Height="30" Fill="#6C7CF3" Margin="0,-26,-32,0"
+                         HorizontalAlignment="Right" VerticalAlignment="Top" />
+                <Ellipse Width="16" Height="14" Fill="#F5A8B8" Margin="-24,-18,0,0"
+                         HorizontalAlignment="Left" VerticalAlignment="Top" />
+                <Ellipse Width="16" Height="14" Fill="#F5A8B8" Margin="0,-18,-24,0"
+                         HorizontalAlignment="Right" VerticalAlignment="Top" />
+
+                <!-- 身体（渐变） -->
+                <Ellipse Width="96" Height="88" Margin="0,4,0,0">
+                    <Ellipse.Fill>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#8FA0F8" Offset="0" />
+                            <GradientStop Color="#5B6FE0" Offset="1" />
+                        </LinearGradientBrush>
+                    </Ellipse.Fill>
+                    <Ellipse.Effect>
+                        <DropShadowEffect BlurRadius="14" ShadowDepth="3" Direction="270" Opacity="0.35" Color="#000000" />
+                    </Ellipse.Effect>
+                </Ellipse>
+
+                <!-- 眼睛 -->
+                <Grid x:Name="Eyes" Margin="0,-6,0,0" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <Ellipse x:Name="EyeL" Width="16" Height="18" Fill="#1C2430" Margin="-22,0,0,0"
+                             HorizontalAlignment="Left" VerticalAlignment="Top" />
+                    <Ellipse x:Name="EyeR" Width="16" Height="18" Fill="#1C2430" Margin="0,0,-22,0"
+                             HorizontalAlignment="Right" VerticalAlignment="Top" />
+                    <Ellipse Width="6" Height="6" Fill="White" Margin="-14,-6,0,0"
+                             HorizontalAlignment="Left" VerticalAlignment="Top" />
+                    <Ellipse Width="6" Height="6" Fill="White" Margin="0,-6,-14,0"
+                             HorizontalAlignment="Right" VerticalAlignment="Top" />
+                </Grid>
+
+                <!-- 腮红 + 嘴 -->
+                <Ellipse Width="14" Height="8" Fill="#F5A8B8" Opacity="0.7" Margin="-40,14,0,0"
+                         HorizontalAlignment="Left" VerticalAlignment="Top" />
+                <Ellipse Width="14" Height="8" Fill="#F5A8B8" Opacity="0.7" Margin="0,14,-40,0"
+                         HorizontalAlignment="Right" VerticalAlignment="Top" />
+                <Ellipse Width="10" Height="6" Fill="#3A4256" Margin="0,10,0,0"
+                         HorizontalAlignment="Center" VerticalAlignment="Top" />
+
+                <!-- 肚皮 -->
+                <Ellipse Width="44" Height="34" Fill="#C9D4FF" Opacity="0.6" Margin="0,28,0,0"
+                         HorizontalAlignment="Center" VerticalAlignment="Top" />
+            </Grid>
+        </StackPanel>
+    </Grid>
+</widgets:WidgetWindowBase>
