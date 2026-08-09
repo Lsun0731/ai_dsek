@@ -12,16 +12,25 @@ namespace AiDesk.App.Services;
 /// </summary>
 public static class PetTtsService
 {
-    /// <summary>可选音色列表（Id 写入配置）。</summary>
+    /// <summary>可选音色列表（Id 写入配置；edge-tts 神经网络语音，SAPI 离线兜底）。</summary>
     public static readonly (string Id, string Name)[] Voices =
     {
-        ("edge:zh-CN-XiaoxiaoNeural", "晓晓 · 女声 自然"),
-        ("edge:zh-CN-XiaoyiNeural", "晓伊 · 女声 年轻"),
+        ("edge:zh-CN-XiaoxiaoNeural", "晓晓 · 女声 温柔"),
+        ("edge:zh-CN-XiaoyiNeural", "晓伊 · 女声 活泼"),
+        ("edge:zh-CN-XiaochenNeural", "晓辰 · 女声 新闻"),
+        ("edge:zh-CN-XiaoshuangNeural", "晓双 · 女声 儿童"),
+        ("edge:zh-CN-liaoning-XiaobeiNeural", "晓北 · 女声 东北"),
+        ("edge:zh-CN-shaanxi-XiaoniNeural", "晓妮 · 女声 陕西"),
         ("edge:zh-CN-YunxiNeural", "云希 · 男声 阳光"),
         ("edge:zh-CN-YunjianNeural", "云健 · 男声 浑厚"),
         ("edge:zh-CN-YunyangNeural", "云扬 · 男声 播音"),
-        ("edge:zh-CN-liaoning-XiaobeiNeural", "晓北 · 女声 东北"),
-        ("edge:zh-CN-shaanxi-XiaoniNeural", "晓妮 · 女声 陕西"),
+        ("edge:zh-CN-YunxiaNeural", "云夏 · 男声 少年"),
+        ("edge:zh-CN-henan-YundengNeural", "云登 · 男声 河南"),
+        ("edge:zh-TW-HsiaoChenNeural", "曉臻 · 女声 台湾"),
+        ("edge:zh-TW-YunJheNeural", "雲哲 · 男声 台湾"),
+        ("edge:zh-HK-HiuGaaiNeural", "曉佳 · 女声 粤语"),
+        ("edge:zh-HK-WanLungNeural", "雲龍 · 男声 粤语"),
+        ("edge:en-US-AriaNeural", "Aria · 英语 女声"),
         ("sapi:zh-CN", "系统语音 · 离线"),
     };
 
@@ -29,20 +38,23 @@ public static class PetTtsService
     private static SpeechSynthesizer? _synth;
     private static int _speakSeq;
 
-    /// <summary>朗读文本（异步）。连续调用时取消上一次。</summary>
-    public static async Task SpeakAsync(string text)
+    /// <summary>
+    /// 朗读文本（异步，连续调用取消上一次）。返回 true 表示 edge-tts 成功，false 表示回退系统语音或失败。
+    /// </summary>
+    public static async Task<bool> SpeakAsync(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
-            return;
+            return false;
 
         var voice = AppConfig.Load().AI.Voice;
         if (voice.StartsWith("edge:"))
         {
             if (await TrySpeakEdgeAsync(text, voice))
-                return;
+                return true;
             // edge 不可用（无 python/断网/失败）→ 回退系统语音
         }
         SpeakSapi(text);
+        return false;
     }
 
     /// <summary>edge-tts 生成并播放；成功返回 true。</summary>

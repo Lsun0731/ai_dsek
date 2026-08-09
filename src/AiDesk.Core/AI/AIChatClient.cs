@@ -19,7 +19,10 @@ public sealed class AIChatSettings
 
     /// <summary>系统提示词（宠物人格）。</summary>
     public string SystemPrompt { get; set; } =
-        "你是一个友好的桌面宠物 AI 助手。回复使用纯文字，简洁友好，不使用任何表情符号、emoji、颜文字或图标。你可以使用工具帮用户处理电脑问题（启动应用、查询系统信息）。";
+        "你是一个友好的桌面宠物 AI 助手。回复使用纯文字，简洁友好，不使用任何表情符号、emoji、颜文字或图标。" +
+        "你可以使用工具帮用户处理电脑问题（启动应用、查询系统信息、联网搜索等）。" +
+        "对于复杂任务（如清理电脑、排查问题），主动拆解成多步依次调用工具完成，而不是只做一步。" +
+        "信息不足时先调用工具获取，或向用户提问确认。";
 
     /// <summary>TTS 音色（edge:音色名 或 sapi:zh-CN，见 PetTtsService.Voices）。</summary>
     public string Voice { get; set; } = "edge:zh-CN-XiaoxiaoNeural";
@@ -132,7 +135,7 @@ public sealed class AIChatClient : IDisposable
     /// 带工具调用（function calling）的对话：模型请求工具 → executor 执行 → 结果回传，循环直到最终回复。
     /// </summary>
     public async Task<AIChatReply> ChatWithToolsAsync(AIChatSettings settings, string userMessage,
-        IReadOnlyList<AITool> tools, Func<string, string, string> executor,
+        IReadOnlyList<AITool> tools, Func<string, string, Task<string>> executor,
         IReadOnlyList<(string Role, string Content)>? history = null, CancellationToken ct = default)
     {
         if (settings is null)
@@ -188,7 +191,7 @@ public sealed class AIChatClient : IDisposable
                         messages.Add(reply.AssistantMessage);
                     foreach (var call in reply.ToolCalls!)
                     {
-                        var result = executor(call.Name, call.Arguments); // 执行工具（同步回调，App 层实现）
+                        var result = await executor(call.Name, call.Arguments); // 执行工具（可异步）
                         messages.Add(new JsonObject
                         {
                             ["role"] = "tool",

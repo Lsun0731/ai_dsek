@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Text;
+using System.Text.RegularExpressions;
 using AiDesk.Core.Diagnostics;
 using AiDesk.Core.Widgets;
 
@@ -37,6 +39,8 @@ public static partial class AgentTools
         "open_search_panel" => OpenSearchPanel(),
         "open_clipboard" => OpenClipboard(),
         "open_main_window" => OpenMainWindow(),
+        "computer_health_check" => ExecuteHealthCheck(),
+        "cleanup_computer" => ExecuteCleanupComputer(),
         _ => $"未知工具: {name}",
     };
 
@@ -332,4 +336,126 @@ public static partial class AgentTools
         try { return Directory.EnumerateDirectories(dir); }
         catch { return []; }
     }
+
+    // ---- 联网搜索（Bing HTML，无 key） ----
+
+    private static readonly HttpClient SearchHttp = CreateSearchHttp();
+
+    private static HttpClient CreateSearchHttp()
+    {
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(12) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("zh-CN,zh;q=0.9");
+        return client;
+    }
+
+    private static async Task<string> ExecuteWebSearchAsync(string argumentsJson)
+    {
+        var query = GetStringArg(argumentsJson, "query")?.Trim() ?? "";
+        if (query.Length == 0)
+            return "缺少 query 参数";
+
+        try
+        {
+            var url = $"https://www.bing.com/search?q={Uri.EscapeDataString(query)}&setlang=zh-CN&count=8";
+            var html = await SearchHttp.GetStringAsync(url);
+
+            var results = new List<string>();
+            foreach (Match m in Regex.Matches(html, "<li class=\"b_algo\".*?</li>", RegexOptions.Singleline))
+            {
+                var block = m.Value;
+                var link = Regex.Match(block, "href=\"(http[^\"]+)\"").Groups[1].Value;
+                var title = Regex.Match(block, "<h2[^>]*>(.*?)</h2>", RegexOptions.Singleline).Groups[1].Value;
+                var snippet = Regex.Match(block, "<p[^>]*>(.*?)</p>", RegexOptions.Singleline).Groups[1].Value;
+                title = WebUtility.HtmlDecode(Regex.Replace(title, "<[^>]+>", ""));
+                snippet = WebUtility.HtmlDecode(Regex.Replace(snippet, "<[^>]+>", ""));
+                if (link.Length > 0 && title.Length > 0)
+                    results.Add($"{title}｜{link}｜{snippet}".TrimEnd('｜'));
+            }
+
+            if (results.Count == 0)
+                return $"未搜索到「{query}」的结果";
+            return $"「{query}」搜索结果：\n" + string.Join("\n", results.Take(5));
+        }
+        catch (Exception ex)
+        {
+            return $"搜索失败: {ex.Message}";
+        }
+    }
+
+    // ---- 任务规划（复合工具） ----
+
+    /// <summary>电脑体检：汇总系统/磁盘/内存/网络健康报告。</summary>
+    private static string ExecuteHealthCheck()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(GetSystemInfo());
+        sb.AppendLine(ExecuteDiskUsage());
+        sb.AppendLine(ExecuteNetworkInfo());
+
+        // 内存占用最高的 3 个进程
+        var top = Process.GetProcesses()
+            .Where(p => { try { return p.ProcessName.Length > 0; } catch { return false; } })
+            .GroupBy(p => p.ProcessName)
+            .Select(g => new { Name = g.Key, MemMb = g.Sum(TryGetMemory) })
+            .OrderByDescending(x => x.MemMb)
+            .Take(3);
+        sb.Append("占用内存最多的进程：" + string.Join("、", top.Select(x => $"{x.Name}（{x.MemMb:F0} MB）")));
+        return sb.ToString();
+    }
+
+    /// <summary>一键清理：临时文件 + 回收站。</summary>
+    private static string ExecuteCleanupComputer()
+    {
+        var report = new List<string>();
+
+        // 1) 临时文件
+        var temp = Path.GetTempPath();
+        long freedBytes = 0;
+        var removed = 0;
+        var failed = 0;
+        foreach (var file in EnumerateFilesSafe(temp))
+        {
+            try
+            {
+                var size = new FileInfo(file).Length;
+                File.Delete(file);
+                freedBytes += size;
+                removed++;
+            }
+            catch
+            {
+                failed++;
+            }
+        }
+        foreach (var dir in EnumerateDirsSafe(temp))
+        {
+            try { Directory.Delete(dir, recursive: false); } catch { /* 非空跳过 */ }
+        }
+        if (removed > 0)
+            report.Add($"临时文件 {removed} 个（{freedBytes / 1024.0 / 1024:F0} MB，{failed} 个占用跳过）");
+        else
+            report.Add("临时目录无可清理文件");
+
+        // 2) 回收站
+        try
+        {
+            SHEmptyRecycleBin(IntPtr.Zero, null, SherbNoConfirmation | SherbNoProgressUi | SherbNoSound);
+            report.Add("回收站已清空");
+        }
+        catch (Exception ex)
+        {
+            report.Add($"回收站清空失败: {ex.Message}");
+        }
+
+        return "清理完成：" + string.Join("；", report);
+    }
+
+    [System.Runtime.InteropServices.DllImport("shell32.dll")]
+    private static extern int SHEmptyRecycleBin(IntPtr hwnd, string? pszRootPath, uint dwFlags);
+
+    private const uint SherbNoConfirmation = 0x1;
+    private const uint SherbNoProgressUi = 0x2;
+    private const uint SherbNoSound = 0x4;
 }

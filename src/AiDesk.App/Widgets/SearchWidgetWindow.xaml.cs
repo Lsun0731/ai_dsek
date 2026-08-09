@@ -112,6 +112,17 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         Telemetry.Event("Search", $"切换音色 {voice}");
     }
 
+    private async void OnVoicePreviewClick(object sender, RoutedEventArgs e)
+    {
+        if (VoiceBox.SelectedValue is not string voice || voice.Length == 0)
+            return;
+        VoiceStatus.Text = "播放中…";
+        var usedEdge = await PetTtsService.SpeakAsync("你好，我是你的桌面助手，你觉得这个声音怎么样？");
+        VoiceStatus.Text = usedEdge
+            ? "edge 在线音色"
+            : "已回退系统语音（edge 不可用，检查网络或 python）";
+    }
+
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
     // ---- 搜索：过滤 + 预览 ----
@@ -294,7 +305,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         _chatHistory.Add(("user", message));
 
         var settings = AppConfig.Load().AI;
-        var reply = await _ai.ChatWithToolsAsync(settings, message, AgentTools.Tools, AgentTools.Execute, _chatHistory);
+        var reply = await _ai.ChatWithToolsAsync(settings, message, AgentTools.Tools, AgentTools.ExecuteAsync, _chatHistory);
 
         _chatBusy = false;
         if (reply.IsError)

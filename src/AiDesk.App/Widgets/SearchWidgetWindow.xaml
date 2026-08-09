@@ -381,9 +381,14 @@
                 <Grid Margin="16,6,16,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="宠物音色" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
-                        <ComboBox x:Name="VoiceBox" Margin="8,0,0,0" Width="210" Height="26" FontSize="11"
+                        <ComboBox x:Name="VoiceBox" Margin="8,0,0,0" Width="200" Height="26" FontSize="11"
                                   DisplayMemberPath="Name" SelectedValuePath="Id"
                                   SelectionChanged="OnVoiceChanged" />
+                        <Button Content="试听" Margin="8,0,0,0" FontSize="11" Padding="10,4"
+                                Background="#FFEFF1F3" Foreground="#0067C0" BorderThickness="0"
+                                Cursor="Hand" Click="OnVoicePreviewClick" />
+                        <TextBlock x:Name="VoiceStatus" FontSize="10" Foreground="#9AA0A6"
+                                   VerticalAlignment="Center" Margin="8,0,0,0" />
                     </StackPanel>
                 </Grid>
 

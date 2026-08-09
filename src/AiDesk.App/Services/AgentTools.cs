@@ -130,6 +130,29 @@ public static partial class AgentTools
             ParametersJsonSchema = """{"type":"object","properties":{}}""",
         },
 
+        // ---- 联网搜索 ----
+        new AITool
+        {
+            Name = "web_search",
+            Description = "联网搜索（Bing）：查询最新信息、新闻、资料、教程等。需要实时信息时使用。",
+            ParametersJsonSchema = """{"type":"object","properties":{"query":{"type":"string","description":"搜索关键词"}},"required":["query"]}""",
+        },
+
+        // ---- 任务规划（复合工具） ----
+        new AITool
+        {
+            Name = "computer_health_check",
+            Description = "电脑体检：汇总系统信息、磁盘空间、内存占用、网络状态，返回健康报告。",
+            ParametersJsonSchema = """{"type":"object","properties":{}}""",
+        },
+        new AITool
+        {
+            Name = "cleanup_computer",
+            Description = "一键清理电脑：清理临时文件 + 清空回收站，返回释放空间报告。",
+            ParametersJsonSchema = """{"type":"object","properties":{}}""",
+            RequireConfirm = true,
+        },
+
         // ---- 危险（需用户确认） ----
         new AITool
         {
@@ -147,7 +170,15 @@ public static partial class AgentTools
         },
     };
 
-    /// <summary>执行工具调用；危险工具先弹确认框。</summary>
+    /// <summary>执行工具调用（异步入口，供 Agent 循环使用）；危险工具先弹确认框。</summary>
+    public static Task<string> ExecuteAsync(string name, string argumentsJson)
+    {
+        if (name == "web_search")
+            return ExecuteWebSearchAsync(argumentsJson);
+        return Task.FromResult(Execute(name, argumentsJson));
+    }
+
+    /// <summary>执行工具调用（同步）；危险工具先弹确认框。</summary>
     public static string Execute(string name, string argumentsJson)
     {
         var tool = Tools.FirstOrDefault(t => t.Name == name);

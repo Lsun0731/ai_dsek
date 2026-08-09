@@ -48,7 +48,7 @@ public class AIChatClientTests
             (name, args) =>
             {
                 calls.Add((name, args));
-                return "ok";
+                return Task.FromResult("ok");
             });
 
         Assert.False(reply.IsError);
@@ -76,7 +76,7 @@ public class AIChatClientTests
             new AIChatSettings { ApiKey = "k" },
             "电脑卡不卡",
             new[] { new AITool { Name = "get_system_info", Description = "系统信息", ParametersJsonSchema = "{}" } },
-            (_, _) => "CPU 12%");
+            (_, _) => Task.FromResult("CPU 12%"));
 
         Assert.False(reply.IsError);
         Assert.Equal("CPU 使用率 12%", reply.Content);
@@ -106,7 +106,7 @@ public class AIChatClientTests
             new AIChatSettings { ApiKey = "k" },
             "一直调用",
             new[] { new AITool { Name = "loop", Description = "循环", ParametersJsonSchema = "{}" } },
-            (_, _) => "done");
+            (_, _) => Task.FromResult("done"));
 
         Assert.True(reply.IsError);
         Assert.Contains("工具调用轮次过多", reply.Error);

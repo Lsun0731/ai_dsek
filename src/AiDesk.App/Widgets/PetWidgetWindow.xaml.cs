@@ -303,7 +303,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         if (_chatHistory.Count > 20)
             _chatHistory.RemoveRange(0, _chatHistory.Count - 20);
 
-        var reply = await _ai.ChatWithToolsAsync(settings, text, Tools, AgentTools.Execute, _chatHistory);
+        var reply = await _ai.ChatWithToolsAsync(settings, text, Tools, AgentTools.ExecuteAsync, _chatHistory);
 
         if (!IsLoaded)
             return;
