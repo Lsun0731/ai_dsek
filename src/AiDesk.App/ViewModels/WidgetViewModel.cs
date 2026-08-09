@@ -11,7 +11,6 @@ namespace AiDesk.App.ViewModels;
 public partial class WidgetViewModel : ObservableObject, IDisposable
 {
     private readonly Dictionary<WidgetKind, WidgetWindowBase> _windows = [];
-    private readonly WidgetSettings _settings = WidgetConfig.Load();
 
     [ObservableProperty]
     private bool _statsOpen;
@@ -36,11 +35,14 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
 
     public WidgetViewModel()
     {
-        WidgetOpacity = _settings.Opacity;
-        WeatherCity = _settings.WeatherCity;
-        StatsOpen = _settings.GetState(WidgetKind.Stats).IsOpen;
-        DateOpen = _settings.GetState(WidgetKind.Date).IsOpen;
-        WeatherOpen = _settings.GetState(WidgetKind.Weather).IsOpen;
+        var settings = AppConfig.Load();
+        WidgetOpacity = settings.Opacity;
+        WeatherCity = settings.WeatherCity;
+        StatsOpen = settings.GetState(WidgetKind.Stats).IsOpen;
+        DateOpen = settings.GetState(WidgetKind.Date).IsOpen;
+        WeatherOpen = settings.GetState(WidgetKind.Weather).IsOpen;
+        MusicOpen = settings.GetState(WidgetKind.Music).IsOpen;
+        SearchOpen = settings.GetState(WidgetKind.Search).IsOpen;
     }
 
     private bool _suppressToggle;
@@ -80,16 +82,19 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
 
     partial void OnWidgetOpacityChanged(double value)
     {
-        _settings.Opacity = value;
-        WidgetConfig.Save(_settings);
+        // 局部更新：基于磁盘最新配置只改 Opacity，避免快照整体覆写其他模块写入
+        var settings = AppConfig.Load();
+        settings.Opacity = value;
+        AppConfig.Save(settings);
         foreach (var window in _windows.Values)
             window.SetWidgetOpacity(value);
     }
 
     partial void OnWeatherCityChanged(string value)
     {
-        _settings.WeatherCity = value;
-        WidgetConfig.Save(_settings);
+        var settings = AppConfig.Load();
+        settings.WeatherCity = value;
+        AppConfig.Save(settings);
         if (_windows.TryGetValue(WidgetKind.Weather, out var weather))
             weather.RefreshNow();
     }
@@ -107,9 +112,10 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
                 SetOpenFlagSilently(kind, false);
             };
             _windows[kind] = window;
-            // 持久化打开状态，重启后记住已打开的组件
-            _settings.GetState(kind).IsOpen = true;
-            WidgetConfig.Save(_settings);
+            // 持久化打开状态，重启后记住已打开的组件（局部更新，不覆写其他字段）
+            var settings = AppConfig.Load();
+            settings.GetState(kind).IsOpen = true;
+            AppConfig.Save(settings);
             window.Show();
             Telemetry.Event("Widget", $"打开 {kind}");
         }

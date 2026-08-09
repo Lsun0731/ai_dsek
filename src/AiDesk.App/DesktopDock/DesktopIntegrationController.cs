@@ -25,39 +25,39 @@ public sealed class DesktopIntegrationController
     private readonly TaskbarHider _taskbar = new();
     private readonly DesktopIconHider _icons = new();
     private DesktopDockWindow? _dock;
-    private DockSettings _settings;
+    private AppSettings _settings;
 
     private DesktopIntegrationController()
     {
-        _settings = DockConfig.Load();
+        _settings = AppConfig.Load();
     }
 
-    public DockSettings Settings => _settings;
+    public AppSettings Settings => _settings;
 
     /// <summary>按当前配置应用：创建/销毁 Dock + 任务栏/图标隐藏状态。</summary>
     public void ApplySettings()
     {
-        if (_settings.Enabled && _dock is null)
+        if (_settings.Dock.Enabled && _dock is null)
         {
             _dock = new DesktopDockWindow();
             _dock.Closed += (_, _) => _dock = null;
             _dock.Show();
         }
-        else if (!_settings.Enabled && _dock is not null)
+        else if (!_settings.Dock.Enabled && _dock is not null)
         {
             _dock.Close();
             _dock = null;
         }
 
-        SetTaskbarHidden(_settings.HideTaskbar);
-        SetIconsHidden(_settings.HideIcons);
+        SetTaskbarHidden(_settings.Dock.HideTaskbar);
+        SetIconsHidden(_settings.Dock.HideIcons);
     }
 
     /// <summary>保存设置并立即应用。</summary>
-    public void SaveSettings(DockSettings settings)
+    public void SaveSettings(AppSettings settings)
     {
         _settings = settings;
-        DockConfig.Save(settings);
+        AppConfig.Save(settings);
         ApplySettings();
     }
 

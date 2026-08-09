@@ -20,7 +20,7 @@ public abstract class WidgetWindowBase : Window
 
     private readonly WidgetKind _kind;
     private readonly WidgetState _state;
-    private readonly WidgetSettings _settings;
+    private readonly AppSettings _settings;
     private DispatcherTimer? _ticker;
 
     /// <summary>
@@ -42,7 +42,7 @@ public abstract class WidgetWindowBase : Window
     protected WidgetWindowBase(WidgetKind kind)
     {
         _kind = kind;
-        _settings = WidgetConfig.Load();
+        _settings = AppConfig.Load();
         _state = _settings.GetState(kind);
 
         WindowStyle = WindowStyle.None;
@@ -144,13 +144,13 @@ public abstract class WidgetWindowBase : Window
     {
         _ticker?.Stop();
         // 重新加载磁盘最新配置：只更新本小组件的位置/开关，避免用构造时的旧快照覆写全局设置（透明度/城市）
-        var settings = WidgetConfig.Load();
+        var settings = AppConfig.Load();
         var state = settings.GetState(_kind);
         state.Left = Left;
         state.Top = Top;
         if (PersistCloseState)
             state.IsOpen = false;
-        WidgetConfig.Save(settings);
+        AppConfig.Save(settings);
         Telemetry.Event("Widget", $"关闭 {_kind}");
     }
 }

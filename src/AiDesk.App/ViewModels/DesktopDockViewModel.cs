@@ -20,10 +20,10 @@ public partial class DesktopDockViewModel : ObservableObject
 
     public DesktopDockViewModel()
     {
-        var settings = _controller?.Settings;
-        _dockEnabled = settings?.Enabled ?? true;
-        _hideTaskbar = settings?.HideTaskbar ?? true;
-        _hideIcons = settings?.HideIcons ?? false;
+        var dock = _controller?.Settings.Dock;
+        _dockEnabled = dock?.Enabled ?? true;
+        _hideTaskbar = dock?.HideTaskbar ?? true;
+        _hideIcons = dock?.HideIcons ?? false;
     }
 
     partial void OnDockEnabledChanged(bool value) => Save();
@@ -32,11 +32,12 @@ public partial class DesktopDockViewModel : ObservableObject
 
     private void Save()
     {
-        _controller?.SaveSettings(new DockSettings
-        {
-            Enabled = DockEnabled,
-            HideTaskbar = HideTaskbar,
-            HideIcons = HideIcons,
-        });
+        if (_controller is null)
+            return;
+        var settings = _controller.Settings;
+        settings.Dock.Enabled = DockEnabled;
+        settings.Dock.HideTaskbar = HideTaskbar;
+        settings.Dock.HideIcons = HideIcons;
+        _controller.SaveSettings(settings);
     }
 }

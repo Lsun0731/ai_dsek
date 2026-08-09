@@ -29,7 +29,7 @@ public partial class WeatherWidgetWindow : WidgetWindowBase
         _loading = true;
         RefreshBtn.IsEnabled = false;
 
-        var city = WidgetConfig.Load().WeatherCity;
+        var city = AppConfig.Load().WeatherCity;
         CityText.Text = city;
 
         try
