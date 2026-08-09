@@ -17,7 +17,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon />
+    <ApplicationIcon>Assets\ai-desk.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\ai-desk.ico" />
+  </ItemGroup>
 
 </Project>

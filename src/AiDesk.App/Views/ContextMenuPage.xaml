@@ -6,7 +6,7 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="960">
-    <Grid Margin="28,24">
+    <Grid Margin="32,28">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -15,9 +15,9 @@
 
         <!-- 标题 -->
         <StackPanel>
-            <TextBlock Text="右键菜单管理" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="右键菜单管理" Style="{StaticResource PageTitle}" />
             <TextBlock Text="查看并管理 Windows 资源管理器右键菜单项，支持禁用与删除"
-                       Foreground="#8A9099" FontSize="13" Margin="0,6,0,0" />
+                       Style="{StaticResource PageSubtitle}" />
         </StackPanel>
 
         <!-- 工具栏 -->
@@ -43,7 +43,7 @@
         </Grid>
 
         <!-- 列表 -->
-        <hc:Card Grid.Row="2" Margin="0,16,0,0" Padding="0">
+        <Border Grid.Row="2" Margin="0,20,0,0" Style="{StaticResource ModernCard}" Padding="8,8,8,0">
             <Grid>
                 <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False"
                           CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="True"
@@ -85,6 +85,6 @@
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            Foreground="#A0A6B0" IsHitTestVisible="False" />
             </Grid>
-        </hc:Card>
+        </Border>
     </Grid>
 </UserControl>

@@ -14,6 +14,57 @@
             <Color x:Key="BrandColor" >#4C7CF3</Color>
             <Color x:Key="BrandColorLight" >#EAF0FE</Color>
 
+            <!-- ===== Web 界面思维设计系统 ===== -->
+            <!-- 页面容器留白规范：页面 Margin 32,28；卡片内 Padding 28 -->
+
+            <!-- 页面标题 -->
+            <Style x:Key="PageTitle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="24" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="#1C2430" />
+            </Style>
+
+            <!-- 页面副标题 -->
+            <Style x:Key="PageSubtitle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Foreground" Value="#8A9099" />
+                <Setter Property="Margin" Value="0,6,0,0" />
+            </Style>
+
+            <!-- 卡片标题 -->
+            <Style x:Key="CardTitle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="#1C2430" />
+            </Style>
+
+            <!-- 卡片说明 -->
+            <Style x:Key="CardDesc" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Foreground" Value="#9AA1AB" />
+                <Setter Property="Margin" Value="0,4,0,0" />
+            </Style>
+
+            <!-- 现代化卡片：白底 + 大圆角 + 柔和阴影（替代 hc:Card） -->
+            <Style x:Key="ModernCard" TargetType="Border">
+                <Setter Property="Background" Value="White" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="Padding" Value="28" />
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect BlurRadius="24" ShadowDepth="2" Direction="270"
+                                          Opacity="0.07" Color="#16213D" />
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 次要输入行说明文字 -->
+            <Style x:Key="HintText" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Foreground" Value="#8A9099" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
             <!-- 圆角色块按钮（强调色拾色器用） -->
             <Style x:Key="ColorSwatchButton" TargetType="Button">
                 <Setter Property="Width" Value="32" />

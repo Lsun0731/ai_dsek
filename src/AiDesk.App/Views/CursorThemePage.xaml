@@ -6,16 +6,15 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="960">
-    <Grid Margin="28,24">
+    <Grid Margin="32,28">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="光标主题" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="切换系统已安装的光标方案，安全可逆"
-                       Foreground="#8A9099" FontSize="13" Margin="0,6,0,0" />
+            <TextBlock Text="光标主题" Style="{StaticResource PageTitle}" />
+            <TextBlock Text="切换系统已安装的光标方案，安全可逆" Style="{StaticResource PageSubtitle}" />
         </StackPanel>
 
         <Grid Grid.Row="1" Margin="0,20,0,0">
@@ -26,7 +25,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- 方案列表 -->
-            <hc:Card Grid.Column="0" Padding="16">
+            <Border Grid.Column="0" Style="{StaticResource ModernCard}" Padding="20">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -68,10 +67,10 @@
                         <TextBlock Text="{Binding Status}" FontSize="12" Foreground="#8A9099" Margin="0,6,0,0" />
                     </StackPanel>
                 </Grid>
-            </hc:Card>
+            </Border>
 
             <!-- 操作区 -->
-            <hc:Card Grid.Column="2" Padding="24">
+            <Border Grid.Column="2" Style="{StaticResource ModernCard}">
                 <StackPanel>
                     <TextBlock Text="操作" FontSize="13" Foreground="#4A515B" Margin="0,0,0,14" />
                     <Button Content="应用所选方案" Command="{Binding ApplyCommand}"
@@ -85,7 +84,7 @@
                     <TextBlock Text="提示：应用后光标会立即切换；恢复默认回到系统标准光标。"
                                FontSize="12" Foreground="#8A9099" TextWrapping="Wrap" Margin="0,16,0,0" />
                 </StackPanel>
-            </hc:Card>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

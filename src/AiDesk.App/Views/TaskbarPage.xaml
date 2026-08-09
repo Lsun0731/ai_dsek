@@ -6,19 +6,18 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="960">
-    <Grid Margin="28,24">
+    <Grid Margin="32,28">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="任务栏美化" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="任务栏透明 / 毛玻璃 / 亚克力特效（部分 Windows 11 版本可能不支持）"
-                       Foreground="#8A9099" FontSize="13" Margin="0,6,0,0" />
+            <TextBlock Text="任务栏美化" Style="{StaticResource PageTitle}" />
+            <TextBlock Text="任务栏透明 / 毛玻璃 / 亚克力特效（部分 Windows 11 版本可能不支持）" Style="{StaticResource PageSubtitle}" />
         </StackPanel>
 
-        <hc:Card Grid.Row="1" Margin="0,20,0,0" Padding="24" MaxWidth="560" HorizontalAlignment="Left">
+        <Border Grid.Row="1" Margin="0,24,0,0" Style="{StaticResource ModernCard}" MaxWidth="560" HorizontalAlignment="Left">
             <StackPanel>
                 <TextBlock Text="特效类型" FontSize="13" Foreground="#4A515B" Margin="0,0,0,6" />
                 <ListBox ItemsSource="{Binding Effects}" SelectedItem="{Binding SelectedEffect}"
@@ -76,6 +75,6 @@
                                Margin="14,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
                 </Grid>
             </StackPanel>
-        </hc:Card>
+        </Border>
     </Grid>
 </UserControl>

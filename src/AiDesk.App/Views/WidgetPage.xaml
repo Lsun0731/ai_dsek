@@ -6,19 +6,18 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="960">
-    <Grid Margin="28,24">
+    <Grid Margin="32,28">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock Text="桌面小组件" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="悬浮时钟与系统监控小组件，可拖动、可调透明度"
-                       Foreground="#8A9099" FontSize="13" Margin="0,6,0,0" />
+            <TextBlock Text="桌面小组件" Style="{StaticResource PageTitle}" />
+            <TextBlock Text="悬浮时钟与系统监控小组件，可拖动、可调透明度" Style="{StaticResource PageSubtitle}" />
         </StackPanel>
 
-        <hc:Card Grid.Row="1" Margin="0,20,0,0" Padding="24" MaxWidth="520" HorizontalAlignment="Left">
+        <Border Grid.Row="1" Margin="0,24,0,0" Style="{StaticResource ModernCard}" MaxWidth="540" HorizontalAlignment="Left">
             <StackPanel>
                 <Grid Margin="0,0,0,8">
                     <Grid.ColumnDefinitions>
@@ -51,6 +50,6 @@
                 <TextBlock Text="使用说明：小组件置顶显示，按住拖动到任意位置；点 ✕ 关闭。位置与透明度自动保存。"
                            FontSize="12" Foreground="#8A9099" TextWrapping="Wrap" Margin="0,20,0,0" />
             </StackPanel>
-        </hc:Card>
+        </Border>
     </Grid>
 </UserControl>

@@ -6,7 +6,7 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="960">
-    <Grid Margin="28,24">
+    <Grid Margin="32,28">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -14,26 +14,25 @@
 
         <!-- 标题 -->
         <StackPanel>
-            <TextBlock Text="桌面美化" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Text="壁纸、轮播与外观模式个性化设置"
-                       Foreground="#8A9099" FontSize="13" Margin="0,6,0,0" />
+            <TextBlock Text="桌面美化" Style="{StaticResource PageTitle}" />
+            <TextBlock Text="壁纸、轮播与外观模式个性化设置" Style="{StaticResource PageSubtitle}" />
         </StackPanel>
 
         <!-- 三张功能卡片 -->
-        <Grid Grid.Row="1" Margin="0,20,0,0">
+        <Grid Grid.Row="1" Margin="0,24,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <!-- 卡片 1：壁纸 -->
-            <hc:Card Grid.Column="0" Padding="20">
+            <Border Grid.Column="0" Style="{StaticResource ModernCard}">
                 <StackPanel>
-                    <TextBlock Text="壁纸" FontSize="16" FontWeight="SemiBold" />
-                    <TextBlock Text="选择图片并应用到桌面" Foreground="#9AA1AB" FontSize="12" Margin="0,4,0,14" />
+                    <TextBlock Text="壁纸" Style="{StaticResource CardTitle}" />
+                    <TextBlock Text="选择图片并应用到桌面" Style="{StaticResource CardDesc}" Margin="0,4,0,16" />
 
                     <TextBlock Text="当前壁纸" FontSize="12" Foreground="#9AA1AB" />
                     <TextBlock Text="{Binding WallpaperPath}" FontSize="12" Foreground="#4A515B"
@@ -53,13 +52,13 @@
                     <TextBlock Text="{Binding WallpaperStatus}" FontSize="12" Foreground="#8A9099"
                                TextWrapping="Wrap" Margin="0,10,0,0" />
                 </StackPanel>
-            </hc:Card>
+            </Border>
 
             <!-- 卡片 2：壁纸轮播 -->
-            <hc:Card Grid.Column="2" Padding="20">
+            <Border Grid.Column="2" Style="{StaticResource ModernCard}">
                 <StackPanel>
-                    <TextBlock Text="壁纸轮播" FontSize="16" FontWeight="SemiBold" />
-                    <TextBlock Text="定时自动切换文件夹中的壁纸" Foreground="#9AA1AB" FontSize="12" Margin="0,4,0,14" />
+                    <TextBlock Text="壁纸轮播" Style="{StaticResource CardTitle}" />
+                    <TextBlock Text="定时自动切换文件夹中的壁纸" Style="{StaticResource CardDesc}" Margin="0,4,0,16" />
 
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
@@ -104,13 +103,13 @@
                     <TextBlock Text="{Binding SlideshowStatus}" FontSize="12" Foreground="#8A9099"
                                TextWrapping="Wrap" Margin="0,10,0,0" />
                 </StackPanel>
-            </hc:Card>
+            </Border>
 
             <!-- 卡片 3：外观模式 -->
-            <hc:Card Grid.Column="4" Padding="20">
+            <Border Grid.Column="4" Style="{StaticResource ModernCard}">
                 <StackPanel>
-                    <TextBlock Text="外观模式" FontSize="16" FontWeight="SemiBold" />
-                    <TextBlock Text="深浅色、透明度与强调色" Foreground="#9AA1AB" FontSize="12" Margin="0,4,0,14" />
+                    <TextBlock Text="外观模式" Style="{StaticResource CardTitle}" />
+                    <TextBlock Text="深浅色、透明度与强调色" Style="{StaticResource CardDesc}" Margin="0,4,0,16" />
 
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
@@ -168,7 +167,7 @@
                     <TextBlock Text="{Binding AppearanceStatus}" FontSize="12" Foreground="#8A9099"
                                TextWrapping="Wrap" Margin="0,10,0,0" />
                 </StackPanel>
-            </hc:Card>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>

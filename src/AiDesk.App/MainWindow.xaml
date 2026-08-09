@@ -7,8 +7,9 @@
         xmlns:views="clr-namespace:AiDesk.App.Views"
         mc:Ignorable="d"
         Title="AiDesk 系统工具箱" Height="780" Width="1200"
-        WindowStartupLocation="CenterScreen" Background="#F5F6FA"
-        FontFamily="Microsoft YaHei UI, Microsoft YaHei">
+        WindowStartupLocation="CenterScreen" Background="#F6F7FB"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei"
+        Icon="/Assets/ai-desk.ico">
 
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:ContextMenuViewModel}">
@@ -38,7 +39,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- 左侧导航 -->
-        <Border Grid.Column="0" Background="White" BorderBrush="#E8EAF0" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="White" BorderBrush="#ECEEF3" BorderThickness="0,0,1,0">
             <DockPanel>
                 <!-- Logo -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,24,0,18">
