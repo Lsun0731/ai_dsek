@@ -1,22 +1,12 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
-using System.Windows.Media;
 using System.Windows.Threading;
 using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
 using AiDesk.Core.SecondDesktop;
 
 namespace AiDesk.App.DesktopDock;
-
-/// <summary>磁贴数据（运行中应用窗口）。</summary>
-public sealed record DockTileModel
-{
-    public required string Title { get; init; }
-    public required int ProcessId { get; init; }
-    public ImageSource? Icon { get; init; }
-    public bool IsActive { get; init; }
-}
 
 /// <summary>
 /// 桌面 Dock（任务栏替代，macOS Dock 风格）：Topmost 悬浮条，显示运行中应用的窗口按钮。
@@ -33,12 +23,13 @@ public partial class DesktopDockWindow : Window
     {
         InitializeComponent();
 
-        // 位置：底部居中
-        Top = SystemParameters.PrimaryScreenHeight - 108;
+        // 位置：底部居中（用 WorkArea，任务栏显隐都正确）
+        var work = SystemParameters.WorkArea;
+        Top = work.Bottom - 108;
         SizeChanged += (_, _) =>
         {
             if (ActualWidth > 0)
-                Left = (SystemParameters.PrimaryScreenWidth - ActualWidth) / 2;
+                Left = work.Left + (work.Width - ActualWidth) / 2;
         };
 
         RefreshRunningApps();
@@ -79,26 +70,14 @@ public partial class DesktopDockWindow : Window
         }
     }
 
-    /// <summary>仅更新高亮（不重建列表，避免磁贴闪烁）。</summary>
+    /// <summary>仅更新高亮：IsActive 变更通知驱动单磁贴重绘，不重建列表、不重置滚动位置。</summary>
     private void RefreshActiveHighlight()
     {
-        if (TilesHost.ItemsSource is not List<DockTileModel> tiles)
+        if (TilesHost.ItemsSource is not IReadOnlyList<DockTileModel> tiles)
             return;
         var foregroundPid = GetForegroundProcessId();
-        var changed = false;
-        for (var i = 0; i < tiles.Count; i++)
-        {
-            var active = tiles[i].ProcessId == foregroundPid;
-            if (tiles[i].IsActive != active)
-            {
-                tiles[i] = tiles[i] with { IsActive = active };
-                changed = true;
-            }
-        }
-        if (changed)
-            TilesHost.ItemsSource = null;
-        if (changed)
-            TilesHost.ItemsSource = tiles;
+        foreach (var tile in tiles)
+            tile.IsActive = tile.ProcessId == foregroundPid;
     }
 
     private static uint GetForegroundProcessId()
