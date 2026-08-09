@@ -50,8 +50,11 @@ public sealed class WhisperService : IDisposable
         return _available;
     }
 
-    /// <summary>转写 wav 音频为中文文本；失败返回 null。</summary>
-    public async Task<string?> TranscribeAsync(string wavPath, CancellationToken ct = default)
+    /// <summary>转写结果：文本 + 置信度（avg_logprob，0 附近最准，越负越不可信）。</summary>
+    public sealed record WhisperResult(string? Text, float Confidence);
+
+    /// <summary>转写 wav 音频为中文文本；失败返回 null。低置信由调用方判定（防杂音误发）。</summary>
+    public async Task<WhisperResult?> TranscribeAsync(string wavPath, CancellationToken ct = default)
     {
         if (!_available)
             return null;
@@ -73,8 +76,12 @@ public sealed class WhisperService : IDisposable
                 Telemetry.Function("Whisper.Transcribe", false, 0, line);
                 return null;
             }
-            Telemetry.Function("Whisper.Transcribe", true, 0, $"len={line.Length}");
-            return line;
+            // 协议：文本 \t avg_logprob
+            var tab = line.LastIndexOf('\t');
+            var text = tab > 0 ? line[..tab] : line;
+            var prob = tab > 0 && float.TryParse(line[(tab + 1)..], out var p) ? p : 0f;
+            Telemetry.Function("Whisper.Transcribe", true, 0, $"len={text.Length} prob={prob:F2}");
+            return new WhisperResult(text, prob);
         }
         catch (Exception ex)
         {
@@ -135,9 +142,10 @@ public sealed class WhisperService : IDisposable
                 if not path:
                     continue
                 try:
-                    segments, _ = model.transcribe(path, language="zh", beam_size=1)
+                    segments, info = model.transcribe(path, language="zh", beam_size=1)
                     text = "".join(s.text for s in segments).strip()
-                    print(text, flush=True)
+                    prob = getattr(info, "avg_logprob", 0.0) or 0.0
+                    print(text + "\t" + str(prob), flush=True)
                 except Exception as e:
                     print("__ERR__" + str(e), flush=True)
             """;

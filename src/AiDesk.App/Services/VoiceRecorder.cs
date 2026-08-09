@@ -11,7 +11,7 @@ namespace AiDesk.App.Services;
 public sealed class VoiceRecorder : IDisposable
 {
     public static readonly TimeSpan SilenceTimeout = TimeSpan.FromSeconds(1.2);
-    private static readonly TimeSpan MaxDuration = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan MaxDuration = TimeSpan.FromSeconds(15);
 
     private WaveInEvent? _waveIn;
     private WaveFileWriter? _writer;

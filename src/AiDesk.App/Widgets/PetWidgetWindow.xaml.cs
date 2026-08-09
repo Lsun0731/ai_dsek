@@ -54,6 +54,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
     // 对话窗口（唤醒后保持连续对话，免重复唤醒词）
     private bool _inConversation;
     private bool _speaking; // 正在朗读回复（点击可打断）
+    private int _listenRetries; // 连续「没听清」次数（防循环）
     private DateTime _lastActivity = DateTime.MinValue;
     private const int ConversationTimeoutSec = 45;
 
@@ -301,7 +302,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         try { _currentEngine?.RecognizeAsyncCancel(); } catch { /* 忽略 */ }
     }
 
-    /// <summary>开始一次听写：whisper 可用 → 录音+离线识别；否则 SAPI 流式听写。</summary>
+    /// <summary>开始一次听写：先语音提示「我在，请说」，播完再开始识别（防提示音被录进麦克风）。</summary>
     public void StartDictation()
     {
         if (!_speechAvailable || !IsLoaded)
@@ -310,8 +311,24 @@ public partial class PetWidgetWindow : WidgetWindowBase
         Dispatcher.Invoke(() =>
         {
             Bubble.Visibility = Visibility.Visible;
-            BubbleText.Text = _inConversation ? "🎤 请说…（再见 结束对话）" : "🎤 听写中…（说完自动发送）";
+            BubbleText.Text = _inConversation ? "🎤 请说…（再见 结束对话）" : "🎤 我在，请说…";
         });
+        _ = PromptAndListenAsync();
+    }
+
+    /// <summary>播提示音 → 开始录音/听写。</summary>
+    private async Task PromptAndListenAsync()
+    {
+        try
+        {
+            await PetTtsService.SpeakAsync("我在，请说");
+        }
+        catch
+        {
+            // 提示音失败不影响听写
+        }
+        if (_phase != SpeechPhase.Dictate || !IsLoaded)
+            return;
 
         if (_whisper.IsAvailable)
         {
@@ -331,21 +348,14 @@ public partial class PetWidgetWindow : WidgetWindowBase
         }
     }
 
-    /// <summary>录音完成回调（whisper 路径）：转写 → 交给 AI。</summary>
+    /// <summary>录音完成回调（whisper 路径）：置信度过滤 → 转写 → 交给 AI。</summary>
     private void OnWhisperRecorded(string? wavPath)
     {
         _recorder.Completed -= OnWhisperRecorded;
         _phase = SpeechPhase.None;
         if (wavPath is null)
         {
-            BubbleText.Text = "没录到声音，再说一次？";
-            Dispatcher.InvokeAsync(() =>
-            {
-                if (_inConversation)
-                    StartDictation();
-                else
-                    StartWakeListen();
-            });
+            FailListen();
             return;
         }
         Dispatcher.InvokeAsync(async () =>
@@ -353,18 +363,37 @@ public partial class PetWidgetWindow : WidgetWindowBase
             if (!IsLoaded)
                 return;
             BubbleText.Text = "🧠 识别中…";
-            var text = await _whisper.TranscribeAsync(wavPath);
+            var result = await _whisper.TranscribeAsync(wavPath);
             try { File.Delete(wavPath); } catch { /* 忽略 */ }
-            if (string.IsNullOrWhiteSpace(text))
+
+            var text = result?.Text?.Trim() ?? "";
+            // 低置信（环境杂音/键盘声被误识别）或空 → 判定没听清，不发给 AI（防循环）
+            if (text.Length == 0 || result!.Confidence < -0.6)
             {
-                BubbleText.Text = "没听清，再说一次？";
-                if (_inConversation)
-                    StartDictation();
-                else
-                    StartWakeListen();
+                FailListen();
                 return;
             }
+            _listenRetries = 0;
             await HandleDictationAsync(text);
+        });
+    }
+
+    /// <summary>没听清：重听，连续 2 次失败回唤醒监听（防无限循环）。</summary>
+    private void FailListen()
+    {
+        _listenRetries++;
+        BubbleText.Text = "没听清，再说一次？";
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (_listenRetries >= 2)
+            {
+                _listenRetries = 0;
+                StartWakeListen();
+            }
+            else
+            {
+                StartDictation();
+            }
         });
     }
 
