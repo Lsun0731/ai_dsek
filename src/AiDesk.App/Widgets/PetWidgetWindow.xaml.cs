@@ -29,6 +29,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         None,      // 空闲/处理中（不监听）
         Wake,      // 监听唤醒词 AD AD
         Dictate,   // 听写中
+        Interrupt, // 朗读回复中，监听打断词（停止/别说了…）
     }
 
     private readonly ChatSessionService _chat = new("pet");
@@ -49,6 +50,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
 
     // 对话窗口（唤醒后保持连续对话，免重复唤醒词）
     private bool _inConversation;
+    private bool _speaking; // 正在朗读回复（点击可打断）
     private DateTime _lastActivity = DateTime.MinValue;
     private const int ConversationTimeoutSec = 45;
 
@@ -60,6 +62,12 @@ public partial class PetWidgetWindow : WidgetWindowBase
     private static readonly string[] ExitWords =
     {
         "再见", "拜拜", "结束", "没事了", "没有了", "不说了", "先这样", "退出", "没别的事了",
+    };
+
+    /// <summary>朗读打断词（朗读期间专用监听，听到即停止回复）。</summary>
+    private static readonly string[] InterruptWords =
+    {
+        "停止", "别说了", "闭嘴", "停一下", "好了好了", "别念了", "不要说了", "停下",
     };
 
     // 拖动检测（按下后轮询位移，超过阈值转系统 DragMove —— 丝滑）
@@ -245,6 +253,34 @@ public partial class PetWidgetWindow : WidgetWindowBase
         });
     }
 
+    /// <summary>朗读期间监听打断词（专用 Grammar，不会被朗读声误触发成对话指令）。</summary>
+    private void StartInterruptListen()
+    {
+        if (!_speechAvailable || !IsLoaded)
+            return;
+        _phase = SpeechPhase.Interrupt;
+        var grammar = new Grammar(new Choices(InterruptWords));
+        RunRecognition(grammar, _ =>
+        {
+            _phase = SpeechPhase.None;
+            Dispatcher.Invoke(() =>
+            {
+                PetTtsService.Stop(); // 立即停止朗读
+                Bubble.Visibility = Visibility.Visible;
+                BubbleText.Text = "好的，不说了～";
+            });
+        });
+    }
+
+    /// <summary>停止打断监听（朗读结束/被打断后调用）。</summary>
+    private void StopInterruptListen()
+    {
+        if (_phase != SpeechPhase.Interrupt)
+            return;
+        _phase = SpeechPhase.None;
+        try { _currentEngine?.RecognizeAsyncCancel(); } catch { /* 忽略 */ }
+    }
+
     /// <summary>开始一次听写（说一句话，说完自动识别）。</summary>
     public void StartDictation()
     {
@@ -319,9 +355,15 @@ public partial class PetWidgetWindow : WidgetWindowBase
         if (!IsLoaded)
             return;
 
-        // 成功回复 → 语音朗读（错误文本已在回调中展示，不朗读）
+        // 成功回复 → 语音朗读（朗读期间监听打断词，可被「停止/别说了」或点击打断）
         if (content is not null)
+        {
+            _speaking = true;
+            StartInterruptListen();
             await PetTtsService.SpeakAsync(content);
+            _speaking = false;
+            StopInterruptListen();
+        }
 
         // 对话窗口内：继续听下一条；否则回待命
         if (_inConversation)
@@ -393,6 +435,9 @@ public partial class PetWidgetWindow : WidgetWindowBase
                     {
                         StartDictation(); // 没听到有效内容 → 重新听
                     }
+                    break;
+                case SpeechPhase.Interrupt:
+                    StartInterruptListen(); // 朗读仍在继续，继续听打断词
                     break;
             }
         });
@@ -477,6 +522,13 @@ public partial class PetWidgetWindow : WidgetWindowBase
         _dragDetect?.Stop();
         if (!_dragStarted)
         {
+            // 朗读中点击 = 打断回复并直接听新指令
+            if (_speaking)
+            {
+                PetTtsService.Stop();
+                StopInterruptListen();
+                BubbleText.Text = "好的，请说…";
+            }
             _inConversation = true; // 点击宠物 = 进入对话窗口并听写（等效唤醒词）
             _lastActivity = DateTime.Now;
             StartDictation();

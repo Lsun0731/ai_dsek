@@ -37,6 +37,7 @@ public static class PetTtsService
     private static MediaPlayer? _player;
     private static SpeechSynthesizer? _synth;
     private static int _speakSeq;
+    private static TaskCompletionSource<bool>? _interrupt;
 
     /// <summary>
     /// 朗读文本（异步，连续调用取消上一次）。返回 true 表示 edge-tts 成功，false 表示回退系统语音或失败。
@@ -57,10 +58,11 @@ public static class PetTtsService
         return false;
     }
 
-    /// <summary>等待播放结束（MediaEnded / 失败 / 超时）。</summary>
+    /// <summary>等待播放结束（MediaEnded / 失败 / 超时 / 打断）。</summary>
     private static Task WaitPlaybackEndAsync(MediaPlayer player, TimeSpan timeout)
     {
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _interrupt = tcs; // 注册为当前播放的打断信号
         EventHandler? ended = null;
         EventHandler<ExceptionEventArgs>? failed = null;
         ended = (_, _) =>
@@ -78,6 +80,14 @@ public static class PetTtsService
         player.MediaEnded += ended;
         player.MediaFailed += failed;
         return Task.WhenAny(tcs.Task, Task.Delay(timeout));
+    }
+
+    /// <summary>打断当前朗读（停止播放/合成并立即结束等待）。</summary>
+    public static void Stop()
+    {
+        try { _player?.Stop(); _player?.Close(); } catch { /* 忽略 */ }
+        try { _synth?.SpeakAsyncCancelAll(); } catch { /* 忽略 */ }
+        _interrupt?.TrySetResult(true);
     }
 
     /// <summary>edge-tts 生成并播放，播放完成后返回；成功返回 true。</summary>
@@ -163,6 +173,7 @@ public static class PetTtsService
             _synth ??= CreateChineseSynth();
             _synth.SpeakAsyncCancelAll();
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _interrupt = tcs; // 注册为当前朗读的打断信号
             EventHandler<SpeakCompletedEventArgs>? handler = null;
             handler = (_, _) =>
             {
