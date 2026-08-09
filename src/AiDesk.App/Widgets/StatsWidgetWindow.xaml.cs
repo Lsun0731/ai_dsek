@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Media;
-using AiDesk.Core.Diagnostics;
 using AiDesk.Core.Widgets;
 
 namespace AiDesk.App.Widgets;

@@ -1,5 +1,3 @@
-using AiDesk.Core.Diagnostics;
-
 namespace AiDesk.App.Widgets;
 
 /// <summary>日期小组件：星期 + 日期 + 年份。</summary>
