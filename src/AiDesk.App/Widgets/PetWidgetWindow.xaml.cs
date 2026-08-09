@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using AiDesk.App.Services;
 using AiDesk.Core.AI;
 using AiDesk.Core.Diagnostics;
+using AiDesk.Core.Widgets;
 
 namespace AiDesk.App.Widgets;
 
@@ -35,6 +36,8 @@ public partial class PetWidgetWindow : WidgetWindowBase
     private readonly List<ImageSource> _idleFrames = new();
     private readonly List<ImageSource> _walkFrames = new();
     private readonly Random _rnd = new();
+    private readonly List<(string Role, string Content)> _chatHistory = new();
+    private readonly SystemStatsProvider _stats = new();
     private int _frameIndex;
     private PetState _state = PetState.Idle;
     private int _walkDir = 1;          // 1 向右 / -1 向左（动画朝向）
@@ -45,6 +48,21 @@ public partial class PetWidgetWindow : WidgetWindowBase
     private volatile SpeechPhase _phase = SpeechPhase.None;
     private SpeechRecognitionEngine? _currentEngine;
     private bool _speechAvailable = true;
+
+    // 对话窗口（唤醒后保持连续对话，免重复唤醒词）
+    private bool _inConversation;
+    private DateTime _lastActivity = DateTime.MinValue;
+    private const int ConversationTimeoutSec = 45;
+
+    // 主动行为（异常提醒 / 空闲问候，节流）
+    private DateTime _lastProactiveCheck = DateTime.MinValue;
+    private DateTime _lastProactiveRemind = DateTime.MinValue;
+
+    /// <summary>对话退出词（说这些结束对话回待命）。</summary>
+    private static readonly string[] ExitWords =
+    {
+        "再见", "拜拜", "结束", "没事了", "没有了", "不说了", "先这样", "退出", "没别的事了",
+    };
 
     // 拖动检测（按下后轮询位移，超过阈值转系统 DragMove —— 丝滑）
     private DispatcherTimer? _dragDetect;
@@ -121,6 +139,8 @@ public partial class PetWidgetWindow : WidgetWindowBase
             PetImage.Source = _idleFrames[_frameIndex % _idleFrames.Count];
         }
         _frameIndex++;
+
+        CheckProactive(); // 主动行为（异常提醒，节流）
     }
 
     /// <summary>走动一步：沿向量向随机目标点移动，四边碰壁折返。</summary>
@@ -205,18 +225,21 @@ public partial class PetWidgetWindow : WidgetWindowBase
         _nextIdleEnd = DateTime.Now.AddSeconds(_rnd.Next(8, 18));
     }
 
-    // ---- 语音对话状态机（唤醒词 AD AD → 听写 → AI → TTS 回复 → 回监听） ----
+    // ---- 语音对话状态机（唤醒词 AD AD → 对话窗口 → AI → TTS 回复） ----
 
     /// <summary>启动唤醒词监听（常驻待命）。</summary>
     private void StartWakeListen()
     {
         if (!_speechAvailable)
             return;
+        _inConversation = false;
         _phase = SpeechPhase.Wake;
         var grammar = new Grammar(new Choices(WakeWords));
         RunRecognition(grammar, text =>
         {
             _phase = SpeechPhase.None; // 命中唤醒：暂停监听，走听写
+            _inConversation = true;    // 进入对话窗口（免重复唤醒词）
+            _lastActivity = DateTime.Now;
             Dispatcher.Invoke(() =>
             {
                 Bubble.Visibility = Visibility.Visible;
@@ -236,7 +259,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         Dispatcher.Invoke(() =>
         {
             Bubble.Visibility = Visibility.Visible;
-            BubbleText.Text = "🎤 听写中…（说完自动发送）";
+            BubbleText.Text = _inConversation ? "🎤 请说…（再见 结束对话）" : "🎤 听写中…（说完自动发送）";
         });
         var grammar = new DictationGrammar();
         RunRecognition(grammar, text =>
@@ -246,7 +269,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         });
     }
 
-    /// <summary>听写结果 → AI Agent → 气泡文字 + TTS 朗读 → 回到唤醒监听。</summary>
+    /// <summary>听写结果 → AI Agent（多轮记忆）→ 气泡 + TTS 朗读 → 对话窗口内继续听。</summary>
     private async Task HandleDictationAsync(string text)
     {
         if (!IsLoaded)
@@ -255,13 +278,32 @@ public partial class PetWidgetWindow : WidgetWindowBase
         if (string.IsNullOrWhiteSpace(text))
         {
             BubbleText.Text = "没听清，再说一次？";
+            if (_inConversation)
+                StartDictation();
+            else
+                StartWakeListen();
+            return;
+        }
+
+        // 退出词：结束对话回待命
+        if (_inConversation && ExitWords.Any(w => text.Contains(w, StringComparison.OrdinalIgnoreCase)))
+        {
+            _inConversation = false;
+            _chatHistory.Clear();
+            BubbleText.Text = "好的，需要时叫我～";
+            await PetTtsService.SpeakAsync("好的，需要时叫我");
             StartWakeListen();
             return;
         }
 
+        _lastActivity = DateTime.Now;
         BubbleText.Text = "🧠 思考中…";
         var settings = AppConfig.Load().AI;
-        var reply = await _ai.ChatWithToolsAsync(settings, text, Tools, AgentTools.Execute);
+        _chatHistory.Add(("user", text));
+        if (_chatHistory.Count > 20)
+            _chatHistory.RemoveRange(0, _chatHistory.Count - 20);
+
+        var reply = await _ai.ChatWithToolsAsync(settings, text, Tools, AgentTools.Execute, _chatHistory);
 
         if (!IsLoaded)
             return;
@@ -275,12 +317,16 @@ public partial class PetWidgetWindow : WidgetWindowBase
         {
             var content = reply.Content ?? "";
             BubbleText.Text = content;
+            _chatHistory.Add(("assistant", content));
             await PetTtsService.SpeakAsync(content); // 语音朗读（edge 音色 / SAPI 回退）
             Telemetry.Function("Pet.Chat", true, 0, $"len={content.Length}");
         }
 
-        // 回复完回到待命监听
-        StartWakeListen();
+        // 对话窗口内：继续听下一条；否则回待命
+        if (_inConversation)
+            StartDictation();
+        else
+            StartWakeListen();
     }
 
     /// <summary>运行一次识别（引擎单次使用，完成后按阶段重启监听）。</summary>
@@ -315,7 +361,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         }
     }
 
-    /// <summary>识别结束（超时/无结果/取消）：若阶段未变则继续监听，否则不重启。</summary>
+    /// <summary>识别结束（超时/无结果/取消）：对话窗口静默超时退出，否则按阶段继续。</summary>
     private void OnRecognizeCompleted(object? sender, RecognizeCompletedEventArgs e)
     {
         if (e.Cancelled)
@@ -328,10 +374,67 @@ public partial class PetWidgetWindow : WidgetWindowBase
                     StartWakeListen();
                     break;
                 case SpeechPhase.Dictate:
-                    StartDictation(); // 没听到有效内容 → 重新听
+                    // 对话窗口静默超时 → 退出对话回待命
+                    if (_inConversation && DateTime.Now - _lastActivity > TimeSpan.FromSeconds(ConversationTimeoutSec))
+                    {
+                        _inConversation = false;
+                        _chatHistory.Clear();
+                        BubbleText.Text = "那我先待命啦，说 AD AD 找我～";
+                        StartWakeListen();
+                    }
+                    else
+                    {
+                        StartDictation(); // 没听到有效内容 → 重新听
+                    }
                     break;
             }
         });
+    }
+
+    // ---- 主动行为（异常提醒 / 空闲问候，节流） ----
+
+    private void CheckProactive()
+    {
+        if (_phase != SpeechPhase.None || _inConversation)
+            return;
+        var now = DateTime.Now;
+        if (now - _lastProactiveCheck < TimeSpan.FromMinutes(5))
+            return;
+        _lastProactiveCheck = now;
+        if (now - _lastProactiveRemind < TimeSpan.FromMinutes(30))
+            return;
+
+        try
+        {
+            var stats = _stats.Sample();
+            var warning = new List<string>();
+            foreach (var disk in stats.Disks)
+            {
+                if (disk.Percent >= 90)
+                    warning.Add($"磁盘 {disk.Name} 已用 {disk.Percent:F0}%");
+            }
+            if (stats.MemPercent >= 90)
+                warning.Add($"内存占用 {stats.MemPercent:F0}%");
+            if (stats.CpuPercent >= 95)
+                warning.Add($"CPU 占用 {stats.CpuPercent:F0}%");
+
+            if (warning.Count > 0)
+            {
+                _lastProactiveRemind = now;
+                var msg = "提醒：" + string.Join("；", warning) + "。需要我帮你清理吗？";
+                Dispatcher.Invoke(() =>
+                {
+                    Bubble.Visibility = Visibility.Visible;
+                    BubbleText.Text = msg;
+                });
+                _ = PetTtsService.SpeakAsync(msg);
+                Telemetry.Event("Pet", "主动提醒");
+            }
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Pet.Proactive", ex);
+        }
     }
 
     // ---- 拖动（丝滑：位移检测 → 系统 DragMove） ----
@@ -366,7 +469,11 @@ public partial class PetWidgetWindow : WidgetWindowBase
     {
         _dragDetect?.Stop();
         if (!_dragStarted)
-            StartDictation(); // 点击宠物 = 直接开始听写（等效唤醒词）
+        {
+            _inConversation = true; // 点击宠物 = 进入对话窗口并听写（等效唤醒词）
+            _lastActivity = DateTime.Now;
+            StartDictation();
+        }
         base.OnMouseLeftButtonUp(e);
     }
 
