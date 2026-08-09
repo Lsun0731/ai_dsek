@@ -1,0 +1,86 @@
+<UserControl x:Class="AiDesk.App.Views.ContextMenuPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="960">
+    <Grid Margin="28,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <StackPanel>
+            <TextBlock Text="右键菜单管理" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="查看并管理 Windows 资源管理器右键菜单项，支持禁用与删除"
+                       Foreground="#8A9099" FontSize="13" Margin="0,6,0,0" />
+        </StackPanel>
+
+        <!-- 工具栏 -->
+        <Grid Grid.Row="1" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ComboBox ItemsSource="{Binding Locations}"
+                      SelectedItem="{Binding SelectedLocation}"
+                      DisplayMemberPath="Display"
+                      Width="200" Height="34" VerticalContentAlignment="Center" />
+            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}"
+                    Style="{StaticResource ButtonPrimary}" Margin="10,0,0,0" Padding="20,0" />
+            <TextBlock Grid.Column="2" Text="{Binding StatusText}"
+                       Margin="14,0,0,0" VerticalAlignment="Center"
+                       Foreground="#8A9099" FontSize="12" />
+        </Grid>
+
+        <!-- 列表 -->
+        <hc:Card Grid.Row="2" Margin="0,16,0,0" Padding="0">
+            <Grid>
+                <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False"
+                          CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="True"
+                          SelectionMode="Single" RowHeight="46" BorderThickness="0"
+                          IsReadOnly="True" Background="White" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="2*" />
+                        <DataGridTextColumn Header="位置" Binding="{Binding LocationDisplay}" Width="1.2*" />
+                        <DataGridTemplateColumn Header="命令" Width="3*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Command}" Foreground="#6B7280"
+                                               FontSize="12" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Command}" VerticalAlignment="Center" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="状态" Width="76">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ToggleButton Style="{StaticResource SwitchToggleButton}"
+                                                  IsChecked="{Binding IsEnabled}"
+                                                  Click="OnToggleClicked" ToolTip="禁用 / 启用" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="操作" Width="64">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="删除" Click="OnDeleteClicked"
+                                            Background="Transparent" BorderThickness="0"
+                                            Foreground="#E5484D" Cursor="Hand" FontSize="13" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock x:Name="EmptyHint" Text="没有找到菜单项，点击「刷新」重试"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#A0A6B0" IsHitTestVisible="False" />
+            </Grid>
+        </hc:Card>
+    </Grid>
+</UserControl>

@@ -4,6 +4,44 @@
              xmlns:local="clr-namespace:AiDesk.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 现代化主色：清爽蓝 -->
+            <SolidColorBrush x:Key="PrimaryColor" Color="#4C7CF3" />
+            <SolidColorBrush x:Key="PrimaryColorDark" Color="#3B66D0" />
+            <SolidColorBrush x:Key="PrimaryColorLight" Color="#EAF0FE" />
+
+            <!-- 现代化开关（胶囊轨道 + 滑块） -->
+            <Style x:Key="SwitchToggleButton" TargetType="ToggleButton">
+                <Setter Property="Width" Value="40" />
+                <Setter Property="Height" Value="22" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Grid>
+                                <Border x:Name="Track" Background="#D3D8E0" CornerRadius="11" />
+                                <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="White"
+                                         HorizontalAlignment="Left" Margin="3,0" />
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Track" Property="Background" Value="{StaticResource PrimaryColor}" />
+                                    <Setter TargetName="Thumb" Property="Margin" Value="21,0,0,0" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Track" Property="Background" Value="#E8EAEF" />
+                                    <Setter TargetName="Thumb" Property="Fill" Value="#B4BAC4" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
