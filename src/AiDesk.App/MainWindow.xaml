@@ -17,6 +17,15 @@
         <DataTemplate DataType="{x:Type vm:DesktopViewModel}">
             <views:DesktopPage />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:TaskbarViewModel}">
+            <views:TaskbarPage />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:WidgetViewModel}">
+            <views:WidgetPage />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CursorThemeViewModel}">
+            <views:CursorThemePage />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
             <views:PlaceholderPage />
         </DataTemplate>

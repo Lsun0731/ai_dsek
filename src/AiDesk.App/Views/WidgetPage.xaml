@@ -1,0 +1,56 @@
+<UserControl x:Class="AiDesk.App.Views.WidgetPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="960">
+    <Grid Margin="28,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="桌面小组件" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Text="悬浮时钟与系统监控小组件，可拖动、可调透明度"
+                       Foreground="#8A9099" FontSize="13" Margin="0,6,0,0" />
+        </StackPanel>
+
+        <hc:Card Grid.Row="1" Margin="0,20,0,0" Padding="24" MaxWidth="520" HorizontalAlignment="Left">
+            <StackPanel>
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="显示小组件" FontSize="14" />
+                        <TextBlock Text="时钟 + 日期 + CPU/内存监控悬浮窗" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
+                                  IsChecked="{Binding IsWidgetOpen}" />
+                </Grid>
+
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="透明度" FontSize="14" />
+                        <TextBlock Text="小组件整体不透明度" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding WidgetOpacity, StringFormat={}{0:P0}}"
+                               VerticalAlignment="Center" FontSize="13" Foreground="#8A9099" />
+                </Grid>
+                <Slider Minimum="0.3" Maximum="1.0" Value="{Binding WidgetOpacity}"
+                        TickFrequency="0.05" IsSnapToTickEnabled="True" Margin="0,6,0,0" />
+
+                <TextBlock Text="使用说明：小组件置顶显示，按住拖动到任意位置；点 ✕ 关闭。位置与透明度自动保存。"
+                           FontSize="12" Foreground="#8A9099" TextWrapping="Wrap" Margin="0,20,0,0" />
+            </StackPanel>
+        </hc:Card>
+    </Grid>
+</UserControl>
