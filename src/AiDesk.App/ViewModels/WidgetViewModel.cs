@@ -131,6 +131,21 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
     /// <summary>热键 Ctrl+Alt+D 呼出/隐藏搜索小组件。</summary>
     public void ToggleSearch() => SearchOpen = !SearchOpen;
 
+    /// <summary>热键 Ctrl+Alt+V：呼出搜索面板并直达剪贴板 Tab（窗口已开则切换并激活）。</summary>
+    public void ShowClipboard()
+    {
+        if (_windows.TryGetValue(WidgetKind.Search, out var existing) && existing is SearchWidgetWindow search)
+        {
+            search.Show();
+            search.Activate();
+            search.SwitchToClipboardTab();
+            return;
+        }
+        SearchOpen = true; // 触发打开（OnSearchOpenChanged → ToggleWidgetWithAI）
+        if (_windows.TryGetValue(WidgetKind.Search, out var opened) && opened is SearchWidgetWindow openedSearch)
+            openedSearch.SwitchToClipboardTab();
+    }
+
     partial void OnWidgetOpacityChanged(double value)
     {
         // 局部更新：基于磁盘最新配置只改 Opacity，避免快照整体覆写其他模块写入

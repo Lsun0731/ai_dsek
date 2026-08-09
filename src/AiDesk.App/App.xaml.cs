@@ -41,12 +41,12 @@ public partial class App : Application
                 Telemetry.Error("FirstChance", args.Exception);
         };
 
-        // 全局热键 Ctrl+Alt+D：呼出/隐藏搜索小组件
-        _hotKey = new HotKeyService(1);
-        if (!_hotKey.Register(0x2 | 0x1, 0x44)) // MOD_CONTROL|MOD_ALT, VK_D
+        // 全局热键：Ctrl+Alt+D 呼出搜索面板（搜索 Tab）；Ctrl+Alt+V 呼出并直达剪贴板 Tab
+        _hotKey = new HotKeyService();
+        if (_hotKey.Register(0x2 | 0x1, 0x44, ToggleSearchWidget) == 0) // MOD_CONTROL|MOD_ALT, VK_D
             Telemetry.Info("App", "全局热键 Ctrl+Alt+D 注册失败（可能被占用）");
-        else
-            _hotKey.Pressed += ToggleSearchWidget;
+        if (_hotKey.Register(0x2 | 0x1, 0x56, ShowClipboardWidget) == 0) // MOD_CONTROL|MOD_ALT, VK_V
+            Telemetry.Info("App", "全局热键 Ctrl+Alt+V 注册失败（可能被占用）");
 
         _tray = new TrayIconService();
         _tray.ShowSecondDesktopRequested += ToggleSearchWidget;
@@ -76,6 +76,13 @@ public partial class App : Application
     {
         if (_mainWindow?.DataContext is MainViewModel vm)
             vm.ToggleSearchWidget();
+    }
+
+    /// <summary>热键 Ctrl+Alt+V：呼出搜索面板并直达剪贴板 Tab。</summary>
+    private void ShowClipboardWidget()
+    {
+        if (_mainWindow?.DataContext is MainViewModel vm)
+            vm.ShowClipboard();
     }
 
     private void Cleanup()

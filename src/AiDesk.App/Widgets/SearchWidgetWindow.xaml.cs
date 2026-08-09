@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -9,21 +10,21 @@ using AiDesk.Core.Diagnostics;
 namespace AiDesk.App.Widgets;
 
 /// <summary>
-/// 搜索命令面板：应用磁贴网格 + 应用搜索 + 剪贴板分页历史 + AI 对话入口（毛玻璃深色）。
+/// 搜索命令面板（双 Tab）：🔍 搜索（列表 + 详情预览，回车启动）｜📋 剪贴板（可折叠 + 分页 8 条/页）。
+/// Ctrl+Alt+D 呼出搜索 Tab；Ctrl+Alt+V 呼出并直达剪贴板 Tab。
 /// </summary>
 public partial class SearchWidgetWindow : WidgetWindowBase
 {
     private const int ClipPageSize = 8;
-    private const int MaxTiles = 12;
 
-    /// <summary>磁贴条目（应用 + 图标）。</summary>
-    public sealed record AppTile(StartMenuApp App, ImageSource? Icon);
+    /// <summary>搜索结果条目（应用 + 图标 + 所在目录）。</summary>
+    public sealed record SearchResult(StartMenuApp App, ImageSource? Icon, string Dir);
 
     private readonly IReadOnlyList<StartMenuApp> _startMenuApps;
-    private readonly List<AppTile> _tiles = new();
     private readonly Dictionary<string, ImageSource?> _iconCache = new();
     private readonly ClipboardMonitor _clipboard = new();
     private int _clipPage;
+    private bool _clipExpanded = true;
 
     /// <summary>点击"AI 对话"：请求呼出宠物对话（由外部订阅处理）。</summary>
     public event Action? AIRequested;
@@ -32,7 +33,6 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     {
         InitializeComponent();
         _startMenuApps = StartMenuAppsProvider.Scan();
-        LoadTiles();
         RefreshClipboard();
         StartTickerMs(1000); // 剪贴板历史每秒刷新
     }
@@ -41,14 +41,39 @@ public partial class SearchWidgetWindow : WidgetWindowBase
 
     protected override void OnTick() => RefreshClipboard();
 
-    // ---- 磁贴 ----
+    // ---- Tab 切换 ----
 
-    private void LoadTiles()
+    /// <summary>切到搜索 Tab（Ctrl+Alt+D 呼出时）。</summary>
+    public void SwitchToSearchTab() => SetTab(search: true);
+
+    /// <summary>切到剪贴板 Tab（Ctrl+Alt+V 呼出时）。</summary>
+    public void SwitchToClipboardTab()
     {
-        foreach (var app in _startMenuApps.Take(MaxTiles))
-            _tiles.Add(new AppTile(app, GetIcon(app)));
-        TileGrid.ItemsSource = _tiles;
+        SetTab(search: false);
+        RefreshClipboard();
     }
+
+    private void SetTab(bool search)
+    {
+        SearchTabBtn.IsChecked = search;
+        ClipTabBtn.IsChecked = !search;
+        SearchPage.Visibility = search ? Visibility.Visible : Visibility.Collapsed;
+        ClipPage.Visibility = search ? Visibility.Collapsed : Visibility.Visible;
+        if (search)
+            SearchBox.Focus();
+    }
+
+    private void OnSearchTabClick(object sender, RoutedEventArgs e) => SetTab(search: true);
+
+    private void OnClipTabClick(object sender, RoutedEventArgs e)
+    {
+        SetTab(search: false);
+        RefreshClipboard();
+    }
+
+    private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    // ---- 搜索：过滤 + 预览 ----
 
     private ImageSource? GetIcon(StartMenuApp app)
     {
@@ -60,53 +85,74 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         return icon;
     }
 
-    private void OnTileClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { Tag: StartMenuApp app })
-            LaunchApp(app);
-    }
-
     private void OnSearchTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
     {
         var query = SearchBox.Text.Trim();
-        var hasQuery = !string.IsNullOrEmpty(query);
-
-        List<AppTile> shown;
-        if (hasQuery)
+        List<SearchResult> results;
+        if (string.IsNullOrEmpty(query))
         {
-            shown = _startMenuApps
+            results = new List<SearchResult>();
+        }
+        else
+        {
+            results = _startMenuApps
                 .Where(a => a.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase))
-                .Take(MaxTiles)
-                .Select(a => new AppTile(a, GetIcon(a)))
+                .Take(12)
+                .Select(a => new SearchResult(a, GetIcon(a), SafeDir(a.LnkPath)))
                 .ToList();
         }
-        else
+        ResultList.ItemsSource = results;
+        UpdatePreview(results.FirstOrDefault());
+    }
+
+    private static string SafeDir(string path)
+    {
+        try { return Path.GetDirectoryName(path) ?? ""; }
+        catch { return ""; }
+    }
+
+    private void OnResultSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (ResultList.SelectedItem is SearchResult r)
+            UpdatePreview(r);
+    }
+
+    private void UpdatePreview(SearchResult? r)
+    {
+        if (r is null)
         {
-            shown = _tiles;
+            PreviewEmpty.Visibility = Visibility.Visible;
+            PreviewDetail.Visibility = Visibility.Collapsed;
+            return;
         }
-
-        TileGrid.ItemsSource = shown;
-        EmptyText.Visibility = hasQuery && shown.Count == 0
-            ? Visibility.Visible : Visibility.Collapsed;
-
-        // 剪贴板区仅在无搜索词时显示（避免残留）
-        var clipVisible = !hasQuery;
-        ClipTitle.Visibility = clipVisible ? Visibility.Visible : Visibility.Collapsed;
-        ClipList.Visibility = clipVisible ? Visibility.Visible : Visibility.Collapsed;
-        PrevPageBtn.Visibility = clipVisible ? Visibility.Visible : Visibility.Collapsed;
-        NextPageBtn.Visibility = clipVisible ? Visibility.Visible : Visibility.Collapsed;
-        PageIndicator.Visibility = clipVisible ? Visibility.Visible : Visibility.Collapsed;
-        if (clipVisible)
-            ClipEmpty.Visibility = _clipboard.History.Count == 0
-                ? Visibility.Visible : Visibility.Collapsed;
-        else
-            ClipEmpty.Visibility = Visibility.Collapsed;
+        PreviewEmpty.Visibility = Visibility.Collapsed;
+        PreviewDetail.Visibility = Visibility.Visible;
+        PreviewIcon.Source = r.Icon;
+        PreviewName.Text = r.App.Name;
+        PreviewPath.Text = r.App.LnkPath;
     }
 
     private void OnSearchKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter && TileGrid.Items.Count > 0 && TileGrid.ItemsSource is not null)
-            LaunchApp(((AppTile)TileGrid.Items[0]).App);
+        if (e.Key == Key.Enter)
+        {
+            var r = ResultList.SelectedItem as SearchResult
+                    ?? ResultList.Items.Cast<SearchResult>().FirstOrDefault();
+            if (r is not null)
+                LaunchApp(r.App);
+        }
+    }
+
+    private void OnResultKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && ResultList.SelectedItem is SearchResult r)
+            LaunchApp(r.App);
+    }
+
+    private void OnResultDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ResultList.SelectedItem is SearchResult r)
+            LaunchApp(r.App);
     }
 
     private void LaunchApp(StartMenuApp app)
@@ -123,13 +169,21 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         }
     }
 
-    // ---- 剪贴板（分页：8 条/页，仅本次开机内存历史，上限 100） ----
+    // ---- 剪贴板：折叠 + 分页 ----
+
+    private void OnFoldClick(object sender, RoutedEventArgs e)
+    {
+        _clipExpanded = !_clipExpanded;
+        ClipFoldArea.Visibility = _clipExpanded ? Visibility.Visible : Visibility.Collapsed;
+        FoldBtn.Content = _clipExpanded ? "▾" : "▸";
+    }
 
     private void RefreshClipboard()
     {
         var items = _clipboard.History;
         Dispatcher.Invoke(() =>
         {
+            ClipCount.Text = $"共 {items.Count} 条";
             var totalPages = Math.Max(1, (items.Count + ClipPageSize - 1) / ClipPageSize);
             if (_clipPage >= totalPages)
                 _clipPage = totalPages - 1;
@@ -144,10 +198,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
             PrevPageBtn.IsEnabled = _clipPage > 0;
             NextPageBtn.IsEnabled = _clipPage < totalPages - 1;
 
-            // 搜索状态下剪贴板区整体隐藏，勿改空态提示
-            var hasQuery = !string.IsNullOrEmpty(SearchBox.Text.Trim());
-            if (!hasQuery)
-                ClipEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            ClipEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         });
     }
 

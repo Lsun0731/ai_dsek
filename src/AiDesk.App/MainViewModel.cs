@@ -46,6 +46,13 @@ public partial class MainViewModel : ObservableObject
         widgetVm?.ToggleSearch();
     }
 
+    /// <summary>热键 Ctrl+Alt+V：呼出搜索面板并直达剪贴板 Tab。</summary>
+    public void ShowClipboard()
+    {
+        var widgetVm = NavItems.FirstOrDefault(n => n.ViewModel is WidgetViewModel)?.ViewModel as WidgetViewModel;
+        widgetVm?.ShowClipboard();
+    }
+
     partial void OnSelectedNavItemChanged(NavItem? value)
     {
         if (value is not null && !value.IsGroup)

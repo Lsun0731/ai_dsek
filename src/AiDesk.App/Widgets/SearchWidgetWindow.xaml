@@ -2,37 +2,61 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:widgets="clr-namespace:AiDesk.App.Widgets"
-        Title="搜索" Width="600" SizeToContent="Height">
+        Title="搜索" Width="640" SizeToContent="Height">
 
     <widgets:WidgetWindowBase.Resources>
-        <!-- 应用磁贴样式（悬停高亮 + 轻微放大） -->
-        <Style x:Key="TileStyle" TargetType="Button">
+        <!-- Tab 切换按钮（选中：下划线高亮 + 背景） -->
+        <Style x:Key="TabToggleStyle" TargetType="ToggleButton">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Width" Value="92" />
-            <Setter Property="Height" Value="96" />
+            <Setter Property="Foreground" Value="#8A94A6" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Padding" Value="14,8" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="14"
-                                Padding="8" RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1" />
-                            </Border.RenderTransform>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8,8,0,0">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                  Margin="{TemplateBinding Padding}" />
+                            </Border>
+                            <Border x:Name="line" Height="2" VerticalAlignment="Bottom"
+                                    Background="#4C7CF3" CornerRadius="1,1,0,0" Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#14FFFFFF" />
+                                <Setter TargetName="line" Property="Visibility" Value="Visible" />
+                                <Setter Property="Foreground" Value="#F0F3F8" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="#D8DEE8" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 搜索结果行（ListBoxItem：圆角选中高亮） -->
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="10" Padding="12,8" Margin="8,2">
+                            <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#264C7CF3" />
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="#1CFFFFFF" />
-                                <Setter TargetName="bd" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="1.06" ScaleY="1.06" />
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#2EFFFFFF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -50,7 +74,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="10" Padding="14,8" Margin="12,2">
+                                CornerRadius="10" Padding="14,9" Margin="12,3">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -70,7 +94,7 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Foreground" Value="#9AA5B5" />
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Padding" Value="9,4" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -91,7 +115,7 @@
             </Setter>
         </Style>
 
-        <!-- 底部功能区按钮 -->
+        <!-- 底部操作条按钮 -->
         <Style x:Key="FooterButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#14FFFFFF" />
             <Setter Property="BorderThickness" Value="1" />
@@ -116,6 +140,31 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- 折叠开关按钮（▾/▸） -->
+        <Style x:Key="FoldButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="#9AA5B5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#22FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </widgets:WidgetWindowBase.Resources>
 
     <!-- 毛玻璃深色面板 -->
@@ -131,105 +180,193 @@
         </Border.Effect>
 
         <Grid>
+            <!-- 结构：0 Tab栏 / 1 分隔 / 2 搜索页 / 3 剪贴板页（叠加，Visibility 切换） -->
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- 顶部输入区 -->
-            <Grid Margin="22,18,22,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="🔍" FontSize="16" VerticalAlignment="Center" Foreground="#9AA5B5" />
-                <TextBox x:Name="SearchBox" Grid.Column="1" FontSize="16" FontWeight="SemiBold"
-                         Foreground="#F0F3F8" CaretBrush="#4C7CF3" Background="Transparent"
-                         BorderThickness="0" Margin="12,0,0,0"
-                         TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" />
-            </Grid>
-            <Border Grid.Row="1" Height="1" Margin="22,0" Background="#1EFFFFFF" />
-
-            <!-- 应用磁贴网格（无搜索=常用 12 个；搜索=过滤匹配） -->
-            <ItemsControl x:Name="TileGrid" Grid.Row="2" Margin="20,16,20,18">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="6" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Button Style="{StaticResource TileStyle}" Tag="{Binding App}" Click="OnTileClick">
-                            <StackPanel HorizontalAlignment="Center">
-                                <Image Source="{Binding Icon}" Width="44" Height="44" Stretch="Uniform"
-                                       RenderOptions.BitmapScalingMode="HighQuality" />
-                                <TextBlock Text="{Binding App.Name}" FontSize="11" Foreground="#D8DEE8"
-                                           TextTrimming="CharacterEllipsis" MaxWidth="88"
-                                           HorizontalAlignment="Center" Margin="0,8,0,0" />
-                            </StackPanel>
-                        </Button>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock x:Name="EmptyText" Grid.Row="3" Text="未找到匹配的应用" FontSize="12.5"
-                       Foreground="#7A8598" Margin="24,0,0,16" Visibility="Collapsed" />
-
-            <!-- 剪贴板历史（分页标题行） -->
-            <Grid Grid.Row="4" Margin="22,0,22,4">
-                <TextBlock x:Name="ClipTitle" Text="剪贴板历史" FontSize="11.5" Foreground="#9AA5B5"
-                           VerticalAlignment="Center" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="PrevPageBtn" Content="◀" Style="{StaticResource PageNavStyle}"
-                            Click="OnPrevPage" />
-                    <TextBlock x:Name="PageIndicator" Text="1/1" FontSize="11" Foreground="#9AA5B5"
-                               Margin="6,0" VerticalAlignment="Center" />
-                    <Button x:Name="NextPageBtn" Content="▶" Style="{StaticResource PageNavStyle}"
-                            Click="OnNextPage" />
+            <!-- ═══ 顶部 Tab 栏 ═══ -->
+            <Grid Margin="16,10,16,0">
+                <StackPanel Orientation="Horizontal">
+                    <ToggleButton x:Name="SearchTabBtn" Content="🔍  搜索" Style="{StaticResource TabToggleStyle}"
+                                  IsChecked="True" Click="OnSearchTabClick" />
+                    <ToggleButton x:Name="ClipTabBtn" Content="📋  剪贴板" Style="{StaticResource TabToggleStyle}"
+                                  Click="OnClipTabClick" />
                 </StackPanel>
+                <Button Content="✕" Grid.Column="1" HorizontalAlignment="Right"
+                        Style="{StaticResource PageNavStyle}" Click="OnCloseClick" />
             </Grid>
-            <Border Grid.Row="5" Height="1" Margin="22,0" Background="#1EFFFFFF" />
+            <Border Grid.Row="1" Height="1" Margin="20,8,20,0" Background="#1EFFFFFF" />
 
-            <!-- 剪贴板列表 -->
-            <ScrollViewer Grid.Row="6" MaxHeight="220" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled" Margin="0,6,0,0">
-                <StackPanel>
-                    <ItemsControl x:Name="ClipList">
-                        <ItemsControl.ItemTemplate>
+            <!-- ═══ 页面一：搜索 ═══ -->
+            <Grid Grid.Row="2" x:Name="SearchPage" Margin="0,6,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 输入区 -->
+                <Grid Margin="22,10,22,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="🔍" FontSize="15" VerticalAlignment="Center" Foreground="#9AA5B5" />
+                    <TextBox x:Name="SearchBox" Grid.Column="1" FontSize="15" FontWeight="SemiBold"
+                             Foreground="#F0F3F8" CaretBrush="#4C7CF3" Background="Transparent"
+                             BorderThickness="0" Margin="12,0,0,0"
+                             TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" />
+                </Grid>
+                <Border Grid.Row="1" Height="1" Margin="22,0" Background="#1EFFFFFF" />
+
+                <!-- 结果区：左列表 + 右预览 -->
+                <Grid Grid.Row="2" Margin="12,10,12,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="228" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 结果列表 -->
+                    <ListBox x:Name="ResultList" Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             SelectionChanged="OnResultSelectionChanged"
+                             KeyDown="OnResultKeyDown"
+                             MouseDoubleClick="OnResultDoubleClick"
+                             MaxHeight="264">
+                        <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource ClipItemStyle}" Tag="{Binding}"
-                                        Click="OnClipItemClick">
-                                    <Grid>
-                                        <TextBlock Text="📋" FontSize="12" VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding}" FontSize="12.5" Foreground="#D8DEE8"
-                                                   TextTrimming="CharacterEllipsis" Margin="30,0,0,0"
-                                                   VerticalAlignment="Center" />
-                                    </Grid>
-                                </Button>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image Source="{Binding Icon}" Width="26" Height="26" Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality" />
+                                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="#E8ECF4"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Dir}" FontSize="10.5" Foreground="#7A8598"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                </Grid>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock x:Name="ClipEmpty" Text="（暂无剪贴板历史）" FontSize="12.5" Foreground="#7A8598"
-                               Margin="24,6,0,12" Visibility="Collapsed" />
-                </StackPanel>
-            </ScrollViewer>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
-            <!-- 底部功能区 -->
-            <Border Grid.Row="7" Height="1" Margin="22,10,22,0" Background="#1EFFFFFF" />
-            <Grid Grid.Row="8" Margin="16,10,16,14">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Button Content="🤖  AI 对话" FontSize="12" Foreground="#D8DEE8"
-                        Style="{StaticResource FooterButtonStyle}" Click="OnAIButtonClick" />
-                <TextBlock Grid.Column="1" Text="Esc 关闭 · 回车启动 · 点击条目复制"
-                           FontSize="10.5" Foreground="#7A8598" VerticalAlignment="Center"
-                           HorizontalAlignment="Right" Margin="12,0,4,0" />
+                    <!-- 详情预览 -->
+                    <Border Grid.Column="1" CornerRadius="12" Background="#0DFFFFFF"
+                            BorderBrush="#14FFFFFF" BorderThickness="1" Margin="10,0,0,0"
+                            Padding="16,14" VerticalAlignment="Top" MinHeight="120">
+                        <StackPanel x:Name="PreviewPanel">
+                            <StackPanel x:Name="PreviewEmpty">
+                                <TextBlock Text="选中应用查看详情" FontSize="11.5" Foreground="#7A8598"
+                                           HorizontalAlignment="Center" Margin="0,36,0,0" />
+                            </StackPanel>
+                            <StackPanel x:Name="PreviewDetail" Visibility="Collapsed">
+                                <Image x:Name="PreviewIcon" Width="56" Height="56" Stretch="Uniform"
+                                       HorizontalAlignment="Center"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock x:Name="PreviewName" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="#F0F3F8" TextAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" Margin="0,10,0,0" />
+                                <TextBlock x:Name="PreviewType" Text="应用程序" FontSize="10.5"
+                                           Foreground="#7A8598" TextAlignment="Center" Margin="0,4,0,0" />
+                                <Border Height="1" Background="#1EFFFFFF" Margin="0,10,0,8" />
+                                <TextBlock Text="位置" FontSize="10" Foreground="#7A8598" />
+                                <TextBlock x:Name="PreviewPath" FontSize="10.5" Foreground="#B8C0CE"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- 底部操作条 -->
+                <Grid Grid.Row="3" Margin="16,4,16,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Content="🤖  AI 对话" FontSize="12" Foreground="#D8DEE8"
+                            Style="{StaticResource FooterButtonStyle}" Click="OnAIButtonClick" />
+                    <TextBlock Grid.Column="1" Text="Esc 关闭 · ↑↓ 选择 · 回车启动"
+                               FontSize="10.5" Foreground="#7A8598" VerticalAlignment="Center"
+                               HorizontalAlignment="Right" Margin="12,0,4,0" />
+                </Grid>
+            </Grid>
+
+            <!-- ═══ 页面二：剪贴板 ═══ -->
+            <Grid Grid.Row="2" x:Name="ClipPage" Margin="0,6,0,0" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 标题栏：折叠 + 标题 | 分页 -->
+                <Grid Margin="20,8,20,4">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="FoldBtn" Content="▾" Style="{StaticResource FoldButtonStyle}"
+                                Click="OnFoldClick" />
+                        <TextBlock Text="剪贴板历史" FontSize="12" Foreground="#C6CEDC"
+                                   VerticalAlignment="Center" Margin="2,0,0,0" />
+                        <TextBlock x:Name="ClipCount" FontSize="10.5" Foreground="#7A8598"
+                                   VerticalAlignment="Center" Margin="10,0,0,0" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button x:Name="PrevPageBtn" Content="◀" Style="{StaticResource PageNavStyle}"
+                                Click="OnPrevPage" />
+                        <TextBlock x:Name="PageIndicator" Text="1/1" FontSize="11" Foreground="#9AA5B5"
+                                   Margin="8,0" VerticalAlignment="Center" />
+                        <Button x:Name="NextPageBtn" Content="▶" Style="{StaticResource PageNavStyle}"
+                                Click="OnNextPage" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- 折叠区：分隔线 + 列表 -->
+                <StackPanel Grid.Row="1" Grid.RowSpan="2" x:Name="ClipFoldArea">
+                    <Border Height="1" Margin="22,0" Background="#1EFFFFFF" />
+                    <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled" Margin="0,8,0,0">
+                        <StackPanel>
+                            <ItemsControl x:Name="ClipList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource ClipItemStyle}" Tag="{Binding}"
+                                                Click="OnClipItemClick">
+                                            <Grid>
+                                                <TextBlock Text="📋" FontSize="12" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding}" FontSize="12.5" Foreground="#D8DEE8"
+                                                           TextTrimming="CharacterEllipsis" Margin="30,0,0,0"
+                                                           VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock x:Name="ClipEmpty" Text="（暂无剪贴板历史）" FontSize="12.5"
+                                       Foreground="#7A8598" Margin="24,10,0,16" Visibility="Collapsed" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </StackPanel>
+
+                <!-- 底部操作条 -->
+                <Grid Grid.Row="3" Margin="16,8,16,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Content="🤖  AI 对话" FontSize="12" Foreground="#D8DEE8"
+                            Style="{StaticResource FooterButtonStyle}" Click="OnAIButtonClick" />
+                    <TextBlock Grid.Column="1" Text="点击条目复制 · Esc 关闭"
+                               FontSize="10.5" Foreground="#7A8598" VerticalAlignment="Center"
+                               HorizontalAlignment="Right" Margin="12,0,4,0" />
+                </Grid>
             </Grid>
         </Grid>
     </Border>
