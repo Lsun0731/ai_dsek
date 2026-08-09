@@ -84,7 +84,9 @@ public sealed class ClipboardMonitor : IDisposable
                 {
                     EmptyClipboard();
                     var data = Marshal.StringToHGlobalUni(text);
-                    SetClipboardData(CF_UNICODETEXT, data);
+                    var result = SetClipboardData(CF_UNICODETEXT, data);
+                    if (result == IntPtr.Zero)
+                        Marshal.FreeHGlobal(data); // 失败时释放，避免泄漏
                 }
                 finally
                 {

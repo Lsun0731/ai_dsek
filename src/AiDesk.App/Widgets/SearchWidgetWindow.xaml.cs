@@ -23,6 +23,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         InitializeComponent();
         _startMenuApps = StartMenuAppsProvider.Scan();
         RefreshClipboard();
+        StartTickerMs(1000); // 剪贴板历史每秒刷新
     }
 
     protected override void OnWidgetLoaded() => SearchBox.Focus();
@@ -47,6 +48,8 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         SearchList.Visibility = !string.IsNullOrEmpty(query)
             ? Visibility.Visible : Visibility.Collapsed;
         ClipTitle.Visibility = string.IsNullOrEmpty(query)
+            ? Visibility.Visible : Visibility.Collapsed;
+        EmptyText.Visibility = !string.IsNullOrEmpty(query) && results.Count == 0
             ? Visibility.Visible : Visibility.Collapsed;
     }
 

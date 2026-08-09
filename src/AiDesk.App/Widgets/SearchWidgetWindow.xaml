@@ -37,6 +37,8 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                    <TextBlock x:Name="EmptyText" Text="未找到匹配的应用" FontSize="12" Foreground="#6A7488"
+                               Margin="16,10,0,10" Visibility="Collapsed" />
 
                     <!-- 剪贴板历史 -->
                     <TextBlock x:Name="ClipTitle" Text="📋 剪贴板历史" FontSize="11" Foreground="#8A94A3"

@@ -39,6 +39,8 @@ public sealed class AIChatClient : IDisposable
     public async Task<AIChatReply> ChatAsync(AIChatSettings settings, string userMessage,
         IReadOnlyList<(string Role, string Content)>? history = null, CancellationToken ct = default)
     {
+        if (settings is null)
+            return new AIChatReply { Error = "AI 配置为空" };
         if (string.IsNullOrWhiteSpace(settings.ApiKey))
             return new AIChatReply { Error = "未配置 API Key，请在设置中填写" };
         if (string.IsNullOrWhiteSpace(userMessage))

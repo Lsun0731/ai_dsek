@@ -87,11 +87,20 @@ public abstract class WidgetWindowBase : Window
     /// <summary>子类可选：窗口加载完成后初始化。</summary>
     protected virtual void OnWidgetLoaded() { }
 
-    /// <summary>启动定时刷新。</summary>
+    /// <summary>启动定时刷新（秒级）。</summary>
     protected void StartTicker(int intervalSeconds)
     {
         _ticker?.Stop();
         _ticker = new DispatcherTimer { Interval = TimeSpan.FromSeconds(intervalSeconds) };
+        _ticker.Tick += (_, _) => SafeTick();
+        _ticker.Start();
+    }
+
+    /// <summary>启动定时刷新（毫秒级，动画帧驱动）。</summary>
+    protected void StartTickerMs(int intervalMilliseconds)
+    {
+        _ticker?.Stop();
+        _ticker = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(intervalMilliseconds) };
         _ticker.Tick += (_, _) => SafeTick();
         _ticker.Start();
     }
@@ -138,9 +147,12 @@ public abstract class WidgetWindowBase : Window
 
     private void OnDrag(object sender, MouseButtonEventArgs e)
     {
-        if (e.LeftButton == MouseButtonState.Pressed)
+        if (ShouldDrag(e) && e.LeftButton == MouseButtonState.Pressed)
             DragMove();
     }
+
+    /// <summary>是否允许拖动（宠物等点击互动型窗口可禁用，避免拖/点冲突）。</summary>
+    protected virtual bool ShouldDrag(MouseButtonEventArgs e) => true;
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {

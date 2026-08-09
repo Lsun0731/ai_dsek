@@ -20,9 +20,12 @@ public partial class PetWidgetWindow : WidgetWindowBase
     public PetWidgetWindow() : base(Services.WidgetKind.Pet, topmost: true)
     {
         InitializeComponent();
-        StartTicker(150); // 动画帧
+        StartTickerMs(150); // 动画帧（毫秒）
         ShowGreeting();
     }
+
+    /// <summary>宠物禁用拖动（点击=聊天，避免拖/点冲突）。</summary>
+    protected override bool ShouldDrag(System.Windows.Input.MouseButtonEventArgs e) => false;
 
     protected override void OnTick()
     {
@@ -104,6 +107,11 @@ public partial class PetWidgetWindow : WidgetWindowBase
         BubbleText.Text = "思考中…";
 
         var reply = await _ai.ChatAsync(settings, message);
+
+        // await 期间窗口可能已关闭
+        if (!IsLoaded)
+            return;
+
         _thinking = false;
 
         if (reply.IsError)
