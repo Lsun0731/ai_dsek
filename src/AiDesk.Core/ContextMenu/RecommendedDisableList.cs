@@ -37,5 +37,9 @@ public static class RecommendedDisableList
         new(ContextMenuLocation.DirectoryExtensions, "WorkFolders", "工作文件夹"),
         new(ContextMenuLocation.FolderExtensions, "WorkFolders", "工作文件夹"),
         new(ContextMenuLocation.DirectoryBackgroundExtensions, "WorkFolders", "工作文件夹"),
+
+        // —— 磁盘驱动器（共享/工作文件夹也出现在驱动器右键）——
+        new(ContextMenuLocation.DriveExtensions, "Sharing", "共享"),
+        new(ContextMenuLocation.DriveExtensions, "WorkFolders", "工作文件夹"),
     ];
 }

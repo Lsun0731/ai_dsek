@@ -63,36 +63,36 @@ public sealed class ContextMenuService
     /// <summary>
     /// 禁用或启用一个菜单项。
     /// 原理：将注册表子键名前加/去 "-" 前缀（Windows 原生禁用技巧，安全可逆）。
+    /// 以注册表实际状态为准（不依赖调用方传入的模型状态，避免快速连续操作时假成功）。
     /// </summary>
     public void SetEnabled(ContextMenuItem item, bool enabled)
     {
-        var disabled = item.IsDisabled;
-        if (disabled == !enabled)
-            return;
-
-        var newName = enabled
-            ? item.RawKeyName.TrimStart('-')
-            : "-" + item.RawKeyName.TrimStart('-');
+        var baseName = item.RawKeyName.TrimStart('-');
+        var desiredName = enabled ? baseName : "-" + baseName;
 
         using var root = OpenRoot();
         using var parent = root.OpenSubKey(ContextMenuPathBuilder.GetPath(item.Location), writable: true)
             ?? throw new InvalidOperationException($"无法打开注册表项：{item.Location}");
 
-        var oldName = item.RawKeyName;
+        // 已处于目标状态：直接返回
+        if (parent.OpenSubKey(desiredName) is not null)
+            return;
 
-        // RegistryKey 无重命名 API：复制值到新键后删除旧键
-        using (var oldKey = parent.OpenSubKey(oldName))
+        // 当前实际键名（可能带 - 前缀）
+        var currentName = parent.OpenSubKey(baseName) is not null ? baseName : "-" + baseName;
+        using (var oldKey = parent.OpenSubKey(currentName))
         {
             if (oldKey is null)
                 throw new InvalidOperationException($"注册表项不存在：{item.RegistryPath}");
 
-            using var newKey = parent.CreateSubKey(newName);
+            // RegistryKey 无重命名 API：复制值到新键后删除旧键
+            using var newKey = parent.CreateSubKey(desiredName);
             foreach (var valueName in oldKey.GetValueNames())
-                newKey.SetValue(valueName, oldKey.GetValue(valueName) ?? string.Empty, oldKey.GetValueKind(valueName));
+                CopyValue(oldKey, newKey, valueName);
             // 复制子键树（如 shell 项常见的 command 子键）
             CopySubKeys(oldKey, newKey);
         }
-        parent.DeleteSubKeyTree(oldName, throwOnMissingSubKey: false);
+        parent.DeleteSubKeyTree(currentName, throwOnMissingSubKey: false);
     }
 
     /// <summary>删除一个菜单项（不可逆，UI 层必须二次确认）。</summary>
@@ -165,8 +165,25 @@ public sealed class ContextMenuService
                 continue;
             using var newChild = destination.CreateSubKey(childName);
             foreach (var valueName in child.GetValueNames())
-                newChild.SetValue(valueName, child.GetValue(valueName) ?? string.Empty, child.GetValueKind(valueName));
+                CopyValue(child, newChild, valueName);
             CopySubKeys(child, newChild);
+        }
+    }
+
+    /// <summary>
+    /// 复制单个值。REG_NONE 等类型没有对应的 <see cref="RegistryValueKind"/> 枚举值，
+    /// 带 kind 写入会抛 ArgumentException，此时退回自动类型推断。
+    /// </summary>
+    private static void CopyValue(RegistryKey source, RegistryKey destination, string valueName)
+    {
+        var value = source.GetValue(valueName) ?? string.Empty;
+        try
+        {
+            destination.SetValue(valueName, value, source.GetValueKind(valueName));
+        }
+        catch (ArgumentException)
+        {
+            destination.SetValue(valueName, value);
         }
     }
 }
