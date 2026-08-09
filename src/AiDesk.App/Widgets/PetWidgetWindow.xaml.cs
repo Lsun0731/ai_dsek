@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Speech.Recognition;
 using System.Text.Json;
 using System.Windows;
@@ -33,6 +34,8 @@ public partial class PetWidgetWindow : WidgetWindowBase
     }
 
     private readonly ChatSessionService _chat = new("pet");
+    private readonly WhisperService _whisper = new();
+    private readonly VoiceRecorder _recorder = new();
     private readonly List<ImageSource> _idleFrames = new();
     private readonly List<ImageSource> _walkFrames = new();
     private readonly Random _rnd = new();
@@ -83,7 +86,24 @@ public partial class PetWidgetWindow : WidgetWindowBase
         LoadFrames();
         StartTickerMs(125); // 帧时长 125ms
 
-        Loaded += (_, _) => StartWakeListen();
+        Loaded += (_, _) =>
+        {
+            StartWakeListen();
+            // 后台检测 whisper 可用性（python + faster_whisper + 模型），就绪后听写走离线识别
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    _whisper.CheckAvailability();
+                    if (_whisper.IsAvailable)
+                        Telemetry.Info("Pet.Whisper", "离线识别就绪");
+                }
+                catch (Exception ex)
+                {
+                    Telemetry.Error("Pet.Whisper", ex);
+                }
+            });
+        };
     }
 
     /// <summary>宠物禁用基类 DragMove（点击=听写，拖动用位移检测后手动调用 DragMove）。</summary>
@@ -281,7 +301,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         try { _currentEngine?.RecognizeAsyncCancel(); } catch { /* 忽略 */ }
     }
 
-    /// <summary>开始一次听写（说一句话，说完自动识别）。</summary>
+    /// <summary>开始一次听写：whisper 可用 → 录音+离线识别；否则 SAPI 流式听写。</summary>
     public void StartDictation()
     {
         if (!_speechAvailable || !IsLoaded)
@@ -292,11 +312,59 @@ public partial class PetWidgetWindow : WidgetWindowBase
             Bubble.Visibility = Visibility.Visible;
             BubbleText.Text = _inConversation ? "🎤 请说…（再见 结束对话）" : "🎤 听写中…（说完自动发送）";
         });
-        var grammar = new DictationGrammar();
-        RunRecognition(grammar, text =>
+
+        if (_whisper.IsAvailable)
         {
-            _phase = SpeechPhase.None; // 已拿到结果：暂停监听
-            Dispatcher.InvokeAsync(async () => await HandleDictationAsync(text));
+            // whisper 路径：录音 → 静音自动停止 → 离线转写（准确率高）
+            _recorder.Completed += OnWhisperRecorded;
+            _recorder.Start();
+        }
+        else
+        {
+            // SAPI 兜底：流式听写
+            var grammar = new DictationGrammar();
+            RunRecognition(grammar, text =>
+            {
+                _phase = SpeechPhase.None; // 已拿到结果：暂停监听
+                Dispatcher.InvokeAsync(async () => await HandleDictationAsync(text));
+            });
+        }
+    }
+
+    /// <summary>录音完成回调（whisper 路径）：转写 → 交给 AI。</summary>
+    private void OnWhisperRecorded(string? wavPath)
+    {
+        _recorder.Completed -= OnWhisperRecorded;
+        _phase = SpeechPhase.None;
+        if (wavPath is null)
+        {
+            BubbleText.Text = "没录到声音，再说一次？";
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (_inConversation)
+                    StartDictation();
+                else
+                    StartWakeListen();
+            });
+            return;
+        }
+        Dispatcher.InvokeAsync(async () =>
+        {
+            if (!IsLoaded)
+                return;
+            BubbleText.Text = "🧠 识别中…";
+            var text = await _whisper.TranscribeAsync(wavPath);
+            try { File.Delete(wavPath); } catch { /* 忽略 */ }
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                BubbleText.Text = "没听清，再说一次？";
+                if (_inConversation)
+                    StartDictation();
+                else
+                    StartWakeListen();
+                return;
+            }
+            await HandleDictationAsync(text);
         });
     }
 
@@ -397,8 +465,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
             try { engine?.Dispose(); } catch { /* 忽略 */ }
             _speechAvailable = false;
             _phase = SpeechPhase.None;
-            Telemetry.Error("Pet.Speech", ex);
-            Dispatcher.Invoke(() =>
+            Telemetry.Error("Pet.Speech", ex);            Dispatcher.Invoke(() =>
             {
                 if (!IsLoaded)
                     return;
@@ -546,6 +613,8 @@ public partial class PetWidgetWindow : WidgetWindowBase
             _phase = SpeechPhase.None;
             _currentEngine?.RecognizeAsyncCancel();
             _currentEngine?.Dispose();
+            _recorder.Dispose();
+            _whisper.Dispose();
         }
         catch
         {
