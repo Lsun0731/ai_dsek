@@ -85,6 +85,13 @@ public partial class ContextMenuPage : UserControl
 
         var count = Vm.ApplyRecommended();
         Refresh();
+        if (count < 0)
+        {
+            MessageBox.Show(FindAncestor<Window>(this),
+                "操作失败，请查看状态栏的失败原因。",
+                "推荐精简失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         MessageBox.Show(FindAncestor<Window>(this),
             $"已禁用 {count} 个冗余菜单项。\n\n可在资源管理器右键查看效果，需要恢复时在列表中打开对应开关。",
             "完成", MessageBoxButton.OK, MessageBoxImage.Information);

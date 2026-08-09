@@ -147,12 +147,20 @@ public partial class ContextMenuViewModel : ObservableObject
             .ToList();
     }
 
-    /// <summary>批量禁用推荐清单中的菜单项并刷新列表，返回实际禁用数量。</summary>
+    /// <summary>批量禁用推荐清单中的菜单项并刷新列表；成功返回禁用数量，失败返回 -1（状态栏有原因）。</summary>
     public int ApplyRecommended()
     {
-        var count = _service.DisableRecommended(RecommendedDisableList.All);
-        Refresh();
-        StatusText = $"已禁用 {count} 个系统冗余菜单项（可随时重新启用）";
-        return count;
+        try
+        {
+            var count = _service.DisableRecommended(RecommendedDisableList.All);
+            Refresh();
+            StatusText = $"已禁用 {count} 个系统冗余菜单项（可随时重新启用）";
+            return count;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"推荐精简失败：{ex.Message}";
+            return -1;
+        }
     }
 }

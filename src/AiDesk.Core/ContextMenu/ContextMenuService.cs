@@ -74,25 +74,32 @@ public sealed class ContextMenuService
         using var parent = root.OpenSubKey(ContextMenuPathBuilder.GetPath(item.Location), writable: true)
             ?? throw new InvalidOperationException($"无法打开注册表项：{item.Location}");
 
-        // 已处于目标状态：直接返回
-        if (parent.OpenSubKey(desiredName) is not null)
-            return;
-
-        // 当前实际键名（可能带 - 前缀）
-        var currentName = parent.OpenSubKey(baseName) is not null ? baseName : "-" + baseName;
-        using (var oldKey = parent.OpenSubKey(currentName))
+        // 已处于目标状态：直接返回（探测键用完即释放，避免句柄泄漏）
+        using (var probe = parent.OpenSubKey(desiredName))
         {
-            if (oldKey is null)
-                throw new InvalidOperationException($"注册表项不存在：{item.RegistryPath}");
-
-            // RegistryKey 无重命名 API：复制值到新键后删除旧键
-            using var newKey = parent.CreateSubKey(desiredName);
-            foreach (var valueName in oldKey.GetValueNames())
-                CopyValue(oldKey, newKey, valueName);
-            // 复制子键树（如 shell 项常见的 command 子键）
-            CopySubKeys(oldKey, newKey);
+            if (probe is not null)
+                return;
         }
-        parent.DeleteSubKeyTree(currentName, throwOnMissingSubKey: false);
+
+        // 当前实际键名（可能带 - 前缀）；极端情况下 baseName 与 -baseName 同时存在时优先 baseName
+        using (var currentProbe = parent.OpenSubKey(baseName))
+        {
+            var currentName = currentProbe is not null ? baseName : "-" + baseName;
+
+            using (var oldKey = parent.OpenSubKey(currentName))
+            {
+                if (oldKey is null)
+                    throw new InvalidOperationException($"注册表项不存在：{item.RegistryPath}");
+
+                // RegistryKey 无重命名 API：复制值到新键后删除旧键
+                using var newKey = parent.CreateSubKey(desiredName);
+                foreach (var valueName in oldKey.GetValueNames())
+                    CopyValue(oldKey, newKey, valueName);
+                // 复制子键树（如 shell 项常见的 command 子键）
+                CopySubKeys(oldKey, newKey);
+            }
+            parent.DeleteSubKeyTree(currentName, throwOnMissingSubKey: false);
+        }
     }
 
     /// <summary>删除一个菜单项（不可逆，UI 层必须二次确认）。</summary>
