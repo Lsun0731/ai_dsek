@@ -14,6 +14,12 @@ public enum WidgetKind
 
     /// <summary>天气</summary>
     Weather,
+
+    /// <summary>音乐监控（当前媒体会话元数据 + 播放控制）</summary>
+    Music,
+
+    /// <summary>应用搜索（启动开始菜单应用）</summary>
+    Search,
 }
 
 /// <summary>单个小组件的持久化状态。</summary>

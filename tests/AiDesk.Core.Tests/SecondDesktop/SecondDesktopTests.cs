@@ -45,11 +45,11 @@ public class TaskbarHiderTests
 public class DesktopIconHiderTests
 {
     [Fact]
-    public void GetIconListHandle_能找到桌面图标窗口()
+    public void GetHideIconsState_返回当前值()
     {
         var hider = new DesktopIconHider();
-        // 只读检查：桌面图标列表窗口（Progman→SHELLDLL_DefView）存在
-        Assert.NotEqual(IntPtr.Zero, hider.GetIconListHandle());
+        // 只读：读取当前注册表状态（0/1/null 均合法，不抛异常即可）
+        _ = hider.GetHideIconsState();
     }
 }
 

@@ -1,32 +1,27 @@
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
 
-namespace AiDesk.App.DesktopDock;
+namespace AiDesk.App.Widgets;
 
-/// <summary>应用搜索浮层：输入即搜开始菜单应用，回车/双击启动，Esc/失焦关闭。</summary>
-public partial class SearchOverlayWindow : Window
+/// <summary>搜索小组件：输入即搜开始菜单应用，回车/双击启动。</summary>
+public partial class SearchWidgetWindow : WidgetWindowBase
 {
     private readonly IReadOnlyList<StartMenuApp> _startMenuApps;
 
-    public SearchOverlayWindow()
+    public SearchWidgetWindow() : base(Services.WidgetKind.Search)
     {
         InitializeComponent();
         _startMenuApps = StartMenuAppsProvider.Scan();
+    }
 
-        // 位置：屏幕顶部居中
-        Left = (SystemParameters.PrimaryScreenWidth - Width) / 2;
-        Top = 48;
+    protected override void OnWidgetLoaded() => SearchBox.Focus();
 
-        Loaded += (_, _) =>
-        {
-            SearchBox.Focus();
-            // 兜底抢前台，避免 Deactivated→Close 闪退
-            NativeMethods.SetForegroundWindow(new System.Windows.Interop.WindowInteropHelper(this).Handle);
-        };
+    protected override void OnTick()
+    {
+        // 搜索为交互驱动，无需轮询
     }
 
     private void OnSearchTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
@@ -38,7 +33,7 @@ public partial class SearchOverlayWindow : Window
         else
             results = _startMenuApps
                 .Where(a => a.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase))
-                .Take(10)
+                .Take(8)
                 .ToList();
 
         SearchList.ItemsSource = results;
@@ -64,20 +59,11 @@ public partial class SearchOverlayWindow : Window
         try
         {
             Process.Start(new ProcessStartInfo(app.LnkPath) { UseShellExecute = true });
-            Telemetry.Function("Dock.Search.Launch", true, 0, $"app={app.Name}");
-            Close();
+            Telemetry.Function("Widget.Search.Launch", true, 0, $"app={app.Name}");
         }
         catch (Exception ex)
         {
-            Telemetry.Function("Dock.Search.Launch", false, 0, $"app={app.Name} err={ex.Message}");
+            Telemetry.Function("Widget.Search.Launch", false, 0, $"app={app.Name} err={ex.Message}");
         }
     }
-
-    private void OnWindowKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Escape)
-            Close();
-    }
-
-    private void OnWindowDeactivated(object? sender, EventArgs e) => Close();
 }

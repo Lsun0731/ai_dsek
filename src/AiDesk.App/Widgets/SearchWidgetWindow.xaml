@@ -1,0 +1,38 @@
+<widgets:WidgetWindowBase x:Class="AiDesk.App.Widgets.SearchWidgetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:widgets="clr-namespace:AiDesk.App.Widgets"
+        Title="搜索" Width="264" SizeToContent="Height">
+    <Border Style="{StaticResource WidgetCard}">
+        <Grid>
+            <StackPanel>
+                <TextBlock Text="🔍 搜索应用" FontSize="12" FontWeight="SemiBold" Foreground="#B0FFFFFF"
+                           Margin="0,0,0,10" />
+                <TextBox x:Name="SearchBox" FontSize="13" Foreground="#E8ECF2" CaretBrush="#4C7CF3"
+                         Background="#2AFFFFFF" BorderBrush="#26FFFFFF" BorderThickness="1"
+                         Padding="10,7" VerticalContentAlignment="Center"
+                         TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" />
+                <ListBox x:Name="SearchList" MaxHeight="220" Margin="0,8,0,0"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         MouseDoubleClick="OnSearchResultDoubleClick">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <TextBlock Text="📄" FontSize="13" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Name}" FontSize="12" Foreground="#E8ECF2"
+                                           Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock x:Name="EmptyText" Text="未找到匹配的应用" FontSize="11" Foreground="#8A94A3"
+                           Margin="0,8,0,0" Visibility="Collapsed" />
+            </StackPanel>
+            <Button Content="✕" Width="20" Height="20" FontSize="9" HorizontalAlignment="Right"
+                    VerticalAlignment="Top" Margin="0,-8,-8,0" Background="Transparent"
+                    Foreground="#66FFFFFF" BorderThickness="0" Cursor="Hand"
+                    Click="OnCloseClicked" ToolTip="关闭小组件" />
+        </Grid>
+    </Border>
+</widgets:WidgetWindowBase>

@@ -23,6 +23,12 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
     private bool _weatherOpen;
 
     [ObservableProperty]
+    private bool _musicOpen;
+
+    [ObservableProperty]
+    private bool _searchOpen;
+
+    [ObservableProperty]
     private double _widgetOpacity = 0.9;
 
     [ObservableProperty]
@@ -56,6 +62,21 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
         if (!_suppressToggle)
             ToggleWidget(WidgetKind.Weather, value, () => new WeatherWidgetWindow());
     }
+
+    partial void OnMusicOpenChanged(bool value)
+    {
+        if (!_suppressToggle)
+            ToggleWidget(WidgetKind.Music, value, () => new MusicWidgetWindow());
+    }
+
+    partial void OnSearchOpenChanged(bool value)
+    {
+        if (!_suppressToggle)
+            ToggleWidget(WidgetKind.Search, value, () => new SearchWidgetWindow());
+    }
+
+    /// <summary>热键 Ctrl+Alt+D 呼出/隐藏搜索小组件。</summary>
+    public void ToggleSearch() => SearchOpen = !SearchOpen;
 
     partial void OnWidgetOpacityChanged(double value)
     {
@@ -109,6 +130,8 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
                 case WidgetKind.Stats: StatsOpen = value; break;
                 case WidgetKind.Date: DateOpen = value; break;
                 case WidgetKind.Weather: WeatherOpen = value; break;
+                case WidgetKind.Music: MusicOpen = value; break;
+                case WidgetKind.Search: SearchOpen = value; break;
             }
         }
         finally

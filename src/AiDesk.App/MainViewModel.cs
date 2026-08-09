@@ -38,6 +38,13 @@ public partial class MainViewModel : ObservableObject
         SelectedNavItem = NavItems[1];
     }
 
+    /// <summary>热键 Ctrl+Alt+D：呼出/隐藏搜索小组件。</summary>
+    public void ToggleSearchWidget()
+    {
+        var widgetVm = NavItems.FirstOrDefault(n => n.ViewModel is WidgetViewModel)?.ViewModel as WidgetViewModel;
+        widgetVm?.ToggleSearch();
+    }
+
     partial void OnSelectedNavItemChanged(NavItem? value)
     {
         if (value is not null && !value.IsGroup)

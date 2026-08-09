@@ -58,7 +58,7 @@
                     </Grid>
 
                     <!-- 天气 -->
-                    <Grid>
+                    <Grid Margin="0,0,0,6">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -69,6 +69,34 @@
                         </StackPanel>
                         <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
                                       IsChecked="{Binding WeatherOpen}" />
+                    </Grid>
+
+                    <!-- 音乐监控 -->
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="🎵 音乐监控" FontSize="14" />
+                            <TextBlock Text="当前播放 · 封面 · 播放控制" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
+                                      IsChecked="{Binding MusicOpen}" />
+                    </Grid>
+
+                    <!-- 应用搜索 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="🔍 应用搜索" FontSize="14" />
+                            <TextBlock Text="输入应用名启动（Ctrl+Alt+D 呼出）" FontSize="12" Foreground="#9AA1AB" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" Style="{StaticResource SwitchToggleButton}"
+                                      IsChecked="{Binding SearchOpen}" />
                     </Grid>
                 </StackPanel>
             </Border>

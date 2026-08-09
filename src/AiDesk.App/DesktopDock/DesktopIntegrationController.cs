@@ -25,7 +25,6 @@ public sealed class DesktopIntegrationController
     private readonly TaskbarHider _taskbar = new();
     private readonly DesktopIconHider _icons = new();
     private DesktopDockWindow? _dock;
-    private SearchOverlayWindow? _searchOverlay;
     private DockSettings _settings;
 
     private DesktopIntegrationController()
@@ -50,10 +49,6 @@ public sealed class DesktopIntegrationController
             _dock = null;
         }
 
-        // Dock 未启用时，独立浮层也不应残留（与 Dock 关闭语义对称）
-        if (!_settings.Enabled && _searchOverlay is not null)
-            _searchOverlay.Close();
-
         SetTaskbarHidden(_settings.HideTaskbar);
         SetIconsHidden(_settings.HideIcons);
     }
@@ -64,23 +59,6 @@ public sealed class DesktopIntegrationController
         _settings = settings;
         DockConfig.Save(settings);
         ApplySettings();
-    }
-
-    /// <summary>呼出搜索浮层（全局热键 Ctrl+Alt+D）。Dock 未启用时独立弹出搜索浮层。</summary>
-    public void ShowSearch()
-    {
-        if (_dock is not null)
-        {
-            _dock.ShowSearch();
-            return;
-        }
-        if (_searchOverlay is null)
-        {
-            _searchOverlay = new SearchOverlayWindow();
-            _searchOverlay.Closed += (_, _) => _searchOverlay = null;
-        }
-        _searchOverlay.Show();
-        _searchOverlay.Activate();
     }
 
     private void SetTaskbarHidden(bool hide)

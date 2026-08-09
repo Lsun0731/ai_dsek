@@ -21,7 +21,7 @@ public sealed class TrayIconService : IDisposable
         };
 
         var menu = new ContextMenuStrip();
-        menu.Items.Add("进入第二桌面", null, (_, _) => ShowSecondDesktopRequested?.Invoke());
+        menu.Items.Add("搜索应用", null, (_, _) => ShowSecondDesktopRequested?.Invoke());
         menu.Items.Add("打开主窗口", null, (_, _) => ShowMainWindowRequested?.Invoke());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => ExitRequested?.Invoke());
