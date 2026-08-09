@@ -31,8 +31,11 @@ public partial class SecondDesktopWindow : Window
     private readonly DispatcherTimer _appsTimer;
     private readonly IReadOnlyList<StartMenuApp> _startMenuApps;
 
-    /// <summary>磁贴点击后待激活的进程 Id（窗口关闭后由控制器激活）。</summary>
-    public int? PendingActivateProcessId { get; private set; }
+    /// <summary>磁贴点击：请求启动/激活指定进程（由控制器隐藏启动器并激活，保持第二桌面模式）。</summary>
+    public event Action<int>? LaunchRequested;
+
+    /// <summary>Esc/返回按钮：请求退出第二桌面模式（由控制器恢复任务栏/图标并关闭窗口）。</summary>
+    public event Action? ExitRequested;
 
     public SecondDesktopWindow()
     {
@@ -83,10 +86,7 @@ public partial class SecondDesktopWindow : Window
     private void OnTileClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: int processId })
-        {
-            PendingActivateProcessId = processId;
-            Close();
-        }
+            LaunchRequested?.Invoke(processId);
     }
 
     // ---- 搜索 ----
@@ -124,7 +124,8 @@ public partial class SecondDesktopWindow : Window
         {
             Process.Start(new ProcessStartInfo(app.LnkPath) { UseShellExecute = true });
             Telemetry.Function("SecondDesktop.Launch", true, 0, $"app={app.Name}");
-            Close();
+            // 启动新应用后隐藏启动器，留在第二桌面模式（任务栏仍隐藏）
+            Hide();
         }
         catch (Exception ex)
         {
@@ -185,12 +186,12 @@ public partial class SecondDesktopWindow : Window
 
     // ---- 退出 ----
 
-    private void OnBackClicked(object sender, RoutedEventArgs e) => Close();
+    private void OnBackClicked(object sender, RoutedEventArgs e) => ExitRequested?.Invoke();
 
     private void OnWindowKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
-            Close();
+            ExitRequested?.Invoke();
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)

@@ -41,7 +41,7 @@ public partial class App : Application
             Telemetry.Info("App", "全局热键 Ctrl+Alt+D 注册失败（可能被占用）");
 
         _tray = new TrayIconService();
-        _tray.ShowSecondDesktopRequested += () => _secondDesktop.Enter();
+        _tray.ShowSecondDesktopRequested += () => _secondDesktop.ToggleOrEnter();
         _tray.ShowMainWindowRequested += ShowMainWindow;
         _tray.ExitRequested += () => Shutdown();
 
@@ -65,6 +65,8 @@ public partial class App : Application
 
     private void Cleanup()
     {
+        // 若第二桌面模式激活，先恢复任务栏/图标（explorer 独立进程，ShowWindow 状态会残留）
+        _secondDesktop?.Exit();
         _hotKey?.Dispose();
         _tray?.Dispose();
     }
