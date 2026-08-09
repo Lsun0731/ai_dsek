@@ -103,6 +103,10 @@ public static class PetTtsService
     /// <summary>edge-tts 生成并播放，播放完成后返回；成功返回 true。</summary>
     private static async Task<bool> TrySpeakEdgeAsync(string text, string voiceId)
     {
+        // 配置存的是带前缀的 ID（edge:zh-CN-...），命令行需要纯音色名
+        var voiceName = voiceId.StartsWith("edge:", StringComparison.Ordinal)
+            ? voiceId["edge:".Length..]
+            : voiceId;
         var tmpDir = Path.Combine(Path.GetTempPath(), "AiDeskTts");
         Directory.CreateDirectory(tmpDir);
         var seq = Interlocked.Increment(ref _speakSeq);
@@ -127,11 +131,12 @@ public static class PetTtsService
             // 文本写入文件避免命令行转义问题
             await File.WriteAllTextAsync(textFile, text);
             var psi = new ProcessStartInfo("python",
-                $"-m edge_tts --voice {voiceId} --file \"{textFile}\" --write-media \"{mediaFile}\"")
+                $"-m edge_tts --voice {voiceName} --file \"{textFile}\" --write-media \"{mediaFile}\"")
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,
+                RedirectStandardOutput = true,
             };
             using var process = Process.Start(psi);
             if (process is null)
@@ -142,7 +147,10 @@ public static class PetTtsService
             {
                 // 失败分支清理本次残留的 mp3（生成中被打断可能留下半文件）
                 try { if (File.Exists(mediaFile)) File.Delete(mediaFile); } catch { /* 忽略 */ }
-                Telemetry.Function("Pet.TtsEdge", false, 0, $"exit={process.ExitCode}");
+                var stderr = await process.StandardError.ReadToEndAsync();
+                var stdout = await process.StandardOutput.ReadToEndAsync();
+                Telemetry.Function("Pet.TtsEdge", false, 0,
+                    $"exit={process.ExitCode} voice={voiceName} err={stderr.Trim()} out={stdout.Trim()}");
                 return false;
             }
 
