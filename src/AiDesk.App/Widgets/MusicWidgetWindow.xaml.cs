@@ -12,7 +12,7 @@ public partial class MusicWidgetWindow : WidgetWindowBase
 {
     private readonly MediaSessionService _media = new();
 
-    public MusicWidgetWindow() : base(Services.WidgetKind.Music, topmost: true)
+    public MusicWidgetWindow() : base(Services.WidgetKind.Music)
     {
         InitializeComponent();
     }
