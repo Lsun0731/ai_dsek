@@ -11,7 +11,7 @@ public sealed class ClipboardMonitor : IDisposable
     private readonly object _lock = new();
     private readonly List<string> _history = new();
     private string _lastText = "";
-    private const int MaxHistory = 50;
+    private const int MaxHistory = 100;
 
     /// <summary>剪贴板历史（最新在前）。</summary>
     public IReadOnlyList<string> History
