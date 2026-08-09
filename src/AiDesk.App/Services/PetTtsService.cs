@@ -53,11 +53,34 @@ public static class PetTtsService
                 return true;
             // edge 不可用（无 python/断网/失败）→ 回退系统语音
         }
-        SpeakSapi(text);
+        await SpeakSapiAsync(text);
         return false;
     }
 
-    /// <summary>edge-tts 生成并播放；成功返回 true。</summary>
+    /// <summary>等待播放结束（MediaEnded / 失败 / 超时）。</summary>
+    private static Task WaitPlaybackEndAsync(MediaPlayer player, TimeSpan timeout)
+    {
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        EventHandler? ended = null;
+        EventHandler<ExceptionEventArgs>? failed = null;
+        ended = (_, _) =>
+        {
+            player.MediaEnded -= ended;
+            player.MediaFailed -= failed;
+            tcs.TrySetResult(true);
+        };
+        failed = (_, _) =>
+        {
+            player.MediaEnded -= ended;
+            player.MediaFailed -= failed;
+            tcs.TrySetResult(true);
+        };
+        player.MediaEnded += ended;
+        player.MediaFailed += failed;
+        return Task.WhenAny(tcs.Task, Task.Delay(timeout));
+    }
+
+    /// <summary>edge-tts 生成并播放，播放完成后返回；成功返回 true。</summary>
     private static async Task<bool> TrySpeakEdgeAsync(string text, string voiceId)
     {
         var tmpDir = Path.Combine(Path.GetTempPath(), "AiDeskTts");
@@ -103,12 +126,13 @@ public static class PetTtsService
                 return false;
             }
 
-            // 播放（停止上一次）
+            // 播放（停止上一次），并等待播放完成（调用方据此恢复语音监听，防回声自触发）
             _player?.Close();
             _player = new MediaPlayer();
             _player.Open(new Uri(mediaFile));
             _player.Play();
             Telemetry.Function("Pet.TtsEdge", true, 0, $"voice={voiceId} len={text.Length}");
+            await WaitPlaybackEndAsync(_player, TimeSpan.FromSeconds(60));
             return true;
         }
         catch (Exception ex)
@@ -131,14 +155,24 @@ public static class PetTtsService
         }
     }
 
-    /// <summary>SAPI 系统语音（离线兜底，中文优先）。</summary>
-    private static void SpeakSapi(string text)
+    /// <summary>SAPI 系统语音（离线兜底，中文优先）；等待朗读完成（取消也会触发 SpeakCompleted）。</summary>
+    private static async Task SpeakSapiAsync(string text)
     {
         try
         {
             _synth ??= CreateChineseSynth();
             _synth.SpeakAsyncCancelAll();
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            EventHandler<SpeakCompletedEventArgs>? handler = null;
+            handler = (_, _) =>
+            {
+                if (_synth is not null)
+                    _synth.SpeakCompleted -= handler;
+                tcs.TrySetResult(true);
+            };
+            _synth.SpeakCompleted += handler;
             _synth.SpeakAsync(text);
+            await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(120)));
         }
         catch (Exception ex)
         {
