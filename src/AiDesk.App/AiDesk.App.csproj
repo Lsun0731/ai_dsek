@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\ai-desk.ico" />
+    <Resource Include="Assets\Pet\*.png" />
   </ItemGroup>
 
 </Project>

@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using AiDesk.App.Services;
 using AiDesk.Core.AI;
 using AiDesk.Core.Diagnostics;
@@ -7,56 +9,58 @@ using AiDesk.Core.Diagnostics;
 namespace AiDesk.App.Widgets;
 
 /// <summary>
-/// 桌面宠物：程序化小猫角色（眨眼/呼吸动画、可拖动、点击互动）。
-/// 与 AI 对话联动：点宠物呼出输入框，AI 回复显示在头顶气泡。
+/// 桌面宠物：VPet 动漫角色动画帧（待机循环），与 AI 对话联动（点击呼出输入框，回复显示头顶气泡）。
+/// 动画素材来源：VPet 开源桌宠（https://github.com/LorisYounger/VPet），非商用免费。
 /// </summary>
 public partial class PetWidgetWindow : WidgetWindowBase
 {
     private readonly AIChatClient _ai = new();
-    private int _tick;
+    private readonly List<ImageSource> _frames = new();
+    private int _frameIndex;
     private bool _chatMode;
     private bool _thinking;
 
     public PetWidgetWindow() : base(Services.WidgetKind.Pet, topmost: true)
     {
         InitializeComponent();
-        StartTickerMs(150); // 动画帧（毫秒）
+        LoadFrames();
+        StartTickerMs(125); // 帧时长 125ms
         ShowGreeting();
     }
 
     /// <summary>宠物禁用拖动（点击=聊天，避免拖/点冲突）。</summary>
     protected override bool ShouldDrag(System.Windows.Input.MouseButtonEventArgs e) => false;
 
-    protected override void OnTick()
+    private void LoadFrames()
     {
-        _tick++;
-
-        // 眨眼：每 20 帧（约 3 秒）闭眼 2 帧（约 0.3 秒）
-        var phase = _tick % 24;
-        if (phase == 0 || phase == 1)
-            SetEyesClosed(true);
-        else
-            SetEyesClosed(false);
-
-        // 呼吸浮动
-        if (PetBody is not null)
+        try
         {
-            var breath = Math.Sin(_tick * 0.12) * 2.5;
-            PetBody.Margin = new Thickness(0, breath, 0, 0);
+            for (var i = 0; i < 17; i++)
+            {
+                var uri = new Uri($"pack://application:,,,/Assets/Pet/pet_{i:D3}.png");
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = uri;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze();
+                _frames.Add(bitmap);
+            }
+            if (_frames.Count > 0)
+                PetImage.Source = _frames[0];
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Pet.LoadFrames", ex);
         }
     }
 
-    private void SetEyesClosed(bool closed)
+    protected override void OnTick()
     {
-        if (EyeL.Height == (closed ? 3 : 18))
+        if (_frames.Count == 0)
             return;
-        EyeL.Height = EyeR.Height = closed ? 3 : 18;
-        EyeL.Margin = closed
-            ? new Thickness(-22, 4, 0, 0)
-            : new Thickness(-22, 0, 0, 0);
-        EyeR.Margin = closed
-            ? new Thickness(0, 4, -22, 0)
-            : new Thickness(0, 0, -22, 0);
+        _frameIndex = (_frameIndex + 1) % _frames.Count;
+        PetImage.Source = _frames[_frameIndex];
     }
 
     private void ShowGreeting()
