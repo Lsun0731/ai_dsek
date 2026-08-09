@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Media;
 using AiDesk.Core.Desktop;
+using AiDesk.Core.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -112,6 +114,7 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ApplyWallpaper()
     {
+        var sw = Stopwatch.StartNew();
         if (string.IsNullOrWhiteSpace(WallpaperPath))
         {
             WallpaperStatus = "请先选择一张图片";
@@ -121,10 +124,14 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
         {
             _wallpaper.SetWallpaper(WallpaperPath, SelectedStyle?.Value ?? WallpaperStyle.Fill);
             WallpaperStatus = $"已应用：{Path.GetFileName(WallpaperPath)}";
+            Telemetry.Function("Desktop.ApplyWallpaper", true, sw.ElapsedMilliseconds,
+                $"style={SelectedStyle?.Display} path={WallpaperPath}");
         }
         catch (Exception ex)
         {
             WallpaperStatus = $"应用失败：{ex.Message}";
+            Telemetry.Function("Desktop.ApplyWallpaper", false, sw.ElapsedMilliseconds,
+                $"error={ex.Message} path={WallpaperPath}");
         }
     }
 
@@ -187,10 +194,12 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var sw = Stopwatch.StartNew();
         var images = ScanImages(SlideshowFolder);
         if (images.Count == 0)
         {
             SlideshowStatus = "文件夹中没有找到图片，请选择包含图片的文件夹";
+            Telemetry.Function("Desktop.StartSlideshow", false, sw.ElapsedMilliseconds, "原因=无图片");
             SetSlideshowEnabledSilently(false);
             return;
         }
@@ -199,10 +208,13 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
             _wallpaper.StartSlideshow(images, TimeSpan.FromMinutes(SlideshowIntervalMinutes),
                 SelectedStyle?.Value ?? WallpaperStyle.Fill, SlideshowShuffle, applyImmediately: true);
             SlideshowStatus = $"轮播中：{images.Count} 张图片，每 {SlideshowIntervalMinutes} 分钟切换";
+            Telemetry.Function("Desktop.StartSlideshow", true, sw.ElapsedMilliseconds,
+                $"count={images.Count} interval={SlideshowIntervalMinutes}m shuffle={SlideshowShuffle}");
         }
         catch (Exception ex)
         {
             SlideshowStatus = $"启动失败：{ex.Message}";
+            Telemetry.Function("Desktop.StartSlideshow", false, sw.ElapsedMilliseconds, ex.Message);
             SetSlideshowEnabledSilently(false);
         }
     }
@@ -216,12 +228,14 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void NextWallpaper()
     {
+        var sw = Stopwatch.StartNew();
         try
         {
             if (SlideshowEnabled)
             {
                 _wallpaper.NextWallpaper(SelectedStyle?.Value ?? WallpaperStyle.Fill);
                 SlideshowStatus = "已切换下一张";
+                Telemetry.Function("Desktop.NextWallpaper", true, sw.ElapsedMilliseconds, "模式=轮播中");
                 return;
             }
 
@@ -236,10 +250,12 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
                 SelectedStyle?.Value ?? WallpaperStyle.Fill, SlideshowShuffle, applyImmediately: true);
             SetSlideshowEnabledSilently(true);
             SlideshowStatus = "已切换一张（轮播已启动）";
+            Telemetry.Function("Desktop.NextWallpaper", true, sw.ElapsedMilliseconds, "模式=首次切换");
         }
         catch (Exception ex)
         {
             SlideshowStatus = $"切换失败：{ex.Message}";
+            Telemetry.Function("Desktop.NextWallpaper", false, sw.ElapsedMilliseconds, ex.Message);
         }
     }
 
@@ -248,40 +264,50 @@ public partial class DesktopViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleDarkMode()
     {
+        var sw = Stopwatch.StartNew();
         try
         {
             _appearance.SetTheme(DarkMode);
+            Telemetry.Function("Desktop.ToggleDarkMode", true, sw.ElapsedMilliseconds, $"dark={DarkMode}");
         }
         catch (Exception ex)
         {
             StatusMessage($"深色模式设置失败：{ex.Message}");
+            Telemetry.Function("Desktop.ToggleDarkMode", false, sw.ElapsedMilliseconds, ex.Message);
         }
     }
 
     [RelayCommand]
     private void ToggleTransparency()
     {
+        var sw = Stopwatch.StartNew();
         try
         {
             _appearance.SetTransparency(TransparencyEnabled);
+            Telemetry.Function("Desktop.ToggleTransparency", true, sw.ElapsedMilliseconds, $"enabled={TransparencyEnabled}");
         }
         catch (Exception ex)
         {
             StatusMessage($"透明度设置失败：{ex.Message}");
+            Telemetry.Function("Desktop.ToggleTransparency", false, sw.ElapsedMilliseconds, ex.Message);
         }
     }
 
     [RelayCommand]
     private void ApplyAccentColor()
     {
+        var sw = Stopwatch.StartNew();
         try
         {
             _appearance.SetAccentColor(ToDrawingColor(AccentColor));
             StatusMessage("强调色已应用");
+            Telemetry.Function("Desktop.ApplyAccentColor", true, sw.ElapsedMilliseconds,
+                $"color=#{AccentColor.R:X2}{AccentColor.G:X2}{AccentColor.B:X2}");
         }
         catch (Exception ex)
         {
             StatusMessage($"强调色设置失败：{ex.Message}");
+            Telemetry.Function("Desktop.ApplyAccentColor", false, sw.ElapsedMilliseconds, ex.Message);
         }
     }
 

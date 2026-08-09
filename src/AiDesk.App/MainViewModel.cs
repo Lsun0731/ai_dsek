@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using AiDesk.App.ViewModels;
+using AiDesk.Core.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AiDesk.App;
@@ -36,6 +37,9 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedNavItemChanged(NavItem? value)
     {
         if (value is not null && !value.IsGroup)
+        {
             CurrentPage = value.ViewModel;
+            Telemetry.Event("Navigate", value.Title);
+        }
     }
 }
