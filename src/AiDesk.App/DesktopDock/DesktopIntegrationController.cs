@@ -1,3 +1,4 @@
+using System.Windows;
 using AiDesk.App.DesktopDock;
 using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
@@ -27,8 +28,8 @@ public sealed class DesktopIntegrationController
     private DesktopDockWindow? _dock;
     private AppSettings _settings;
 
-    /// <summary>Dock 预留的底部工作区高度（物理像素；Dock 高 108 DIP + 边距）。</summary>
-    private const int DockReserveHeight = 116;
+    /// <summary>Dock 高度（DIP）。预留工作区时按 DPI 换算为物理像素。</summary>
+    private const double DockHeightDip = 108;
 
     private bool _workAreaReserved;
     private NativeMethods.RECT _originalWorkArea;
@@ -72,10 +73,13 @@ public sealed class DesktopIntegrationController
                 // 保存原始工作区，恢复时还原
                 NativeMethods.SystemParametersInfo(
                     NativeMethods.SPI_GETWORKAREA, 0, ref _originalWorkArea, 0);
+                // 预留高度 = Dock 高（DIP）× DPI 比例 + 边距（物理像素）
+                var dpiScale = (double)NativeMethods.GetSystemMetrics(1) / SystemParameters.PrimaryScreenHeight;
+                var reservePx = (int)Math.Round((DockHeightDip + 8) * dpiScale);
                 var rect = new NativeMethods.RECT
                 {
                     Right = NativeMethods.GetSystemMetrics(0), // SM_CXSCREEN（物理像素）
-                    Bottom = NativeMethods.GetSystemMetrics(1) - DockReserveHeight,
+                    Bottom = NativeMethods.GetSystemMetrics(1) - reservePx,
                 };
                 NativeMethods.SystemParametersInfo(
                     NativeMethods.SPI_SETWORKAREA, 0, ref rect, NativeMethods.SPIF_SENDCHANGE);

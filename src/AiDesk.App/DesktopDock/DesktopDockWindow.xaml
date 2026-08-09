@@ -4,7 +4,7 @@
         Title="AiDesk 桌面Dock"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" ResizeMode="NoResize" Topmost="True"
-        SizeToContent="WidthAndHeight">
+        Height="108" SizeToContent="Width">
     <!-- macOS Dock 风格悬浮条：半透明渐变玻璃 + 圆角 + 高光边框 + 阴影，浮于所有窗口之上 -->
     <Border x:Name="DockBorder" CornerRadius="18" BorderThickness="1,1,1,1"
             Padding="14,10" Margin="0,0,0,10">
