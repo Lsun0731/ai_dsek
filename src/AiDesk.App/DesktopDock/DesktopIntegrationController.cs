@@ -50,6 +50,10 @@ public sealed class DesktopIntegrationController
             _dock = null;
         }
 
+        // Dock 未启用时，独立浮层也不应残留（与 Dock 关闭语义对称）
+        if (!_settings.Enabled && _searchOverlay is not null)
+            _searchOverlay.Close();
+
         SetTaskbarHidden(_settings.HideTaskbar);
         SetIconsHidden(_settings.HideIcons);
     }
