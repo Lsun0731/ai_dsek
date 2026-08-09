@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Globalization;
+using System.Speech.Recognition;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
@@ -9,7 +11,6 @@ using AiDesk.App.Services;
 using AiDesk.Core.AI;
 using AiDesk.Core.Diagnostics;
 using AiDesk.Core.Widgets;
-using Windows.Media.SpeechRecognition;
 
 namespace AiDesk.App.Widgets;
 
@@ -35,9 +36,9 @@ public partial class PetWidgetWindow : WidgetWindowBase
     private bool _chatMode;
     private bool _thinking;
 
-    // 语音识别（Windows 听写，免费离线）
-    private SpeechRecognizer? _recognizer;
-    private bool _listening;
+    // 语音识别（SAPI 系统语音引擎，免费离线中文；WinRT 在本机不可用时回退）
+    private SpeechRecognitionEngine? _engine;
+    private volatile bool _listening;
 
     // 拖动检测（按下后轮询位移，超过阈值转系统 DragMove —— 丝滑）
     private DispatcherTimer? _dragDetect;
@@ -271,75 +272,77 @@ public partial class PetWidgetWindow : WidgetWindowBase
             ShowGreeting();
     }
 
-    // ---- 语音输入（Windows 听写） ----
+    // ---- 语音输入（SAPI 系统听写：点开始 → 说完自动识别 → 发送） ----
 
     private async void OnMicClicked(object sender, RoutedEventArgs e)
     {
         if (_listening)
-            await StopListeningAsync();
-        else
-            await StartListeningAsync();
+        {
+            // 停止并取消本次听写
+            _engine?.RecognizeAsyncCancel();
+            return;
+        }
+        await StartListeningAsync();
     }
 
-    private async Task StartListeningAsync()
+    private Task StartListeningAsync()
     {
-        try
+        // 进入即置位，防止快速双击并发启动
+        _listening = true;
+        return Task.Run(() =>
         {
-            _recognizer ??= new SpeechRecognizer();
-            if (_recognizer.Constraints.Count == 0)
+            try
             {
-                _recognizer.Constraints.Add(new SpeechRecognitionTopicConstraint(
-                    SpeechRecognitionScenario.Dictation, "dictation"));
+                using var engine = new SpeechRecognitionEngine(new CultureInfo("zh-CN"));
+                _engine = engine;
+                engine.LoadGrammar(new DictationGrammar());
+                engine.SetInputToDefaultAudioDevice();
+                engine.SpeechRecognized += OnSpeechRecognized;
+                engine.RecognizeCompleted += OnRecognizeCompleted;
+                Dispatcher.Invoke(() =>
+                {
+                    BubbleText.Text = "🎤 听写中…（说完自动识别）";
+                    BubbleText.Visibility = Visibility.Visible;
+                });
+                // 单次识别：录音直到说完停顿，自动结束
+                engine.RecognizeAsync(RecognizeMode.Single);
             }
-            await _recognizer.CompileConstraintsAsync();
-            _recognizer.ContinuousRecognitionSession.ResultGenerated += OnSpeechResult;
-            await _recognizer.ContinuousRecognitionSession.StartAsync();
-            _listening = true;
-            BubbleText.Text = "🎤 听写中…（说完点 ⏹ 发送）";
-            BubbleText.Visibility = Visibility.Visible;
-        }
-        catch (Exception ex)
-        {
-            BubbleText.Text = $"语音不可用：{ex.Message}";
-            Telemetry.Error("Pet.Speech", ex);
-        }
-    }
-
-    private void OnSpeechResult(SpeechContinuousRecognitionSession sender,
-        SpeechContinuousRecognitionResultGeneratedEventArgs args)
-    {
-        var text = args.Result.Text;
-        Dispatcher.Invoke(() =>
-        {
-            InputBox.Text = text;
-            if (args.Result.Confidence > SpeechRecognitionConfidence.Low)
+            catch (Exception ex)
             {
-                BubbleText.Text = $"听写：{text}";
-                BubbleText.Visibility = Visibility.Visible;
+                _listening = false;
+                Dispatcher.Invoke(() => BubbleText.Text = $"语音不可用：{ex.Message}");
+                Telemetry.Error("Pet.Speech", ex);
             }
         });
     }
 
-    private async Task StopListeningAsync()
+    private void OnSpeechRecognized(object? sender, SpeechRecognizedEventArgs e)
     {
-        if (_recognizer is null)
-            return;
-        try
+        var text = e.Result?.Text ?? "";
+        Dispatcher.Invoke(() =>
         {
-            await _recognizer.ContinuousRecognitionSession.StopAsync();
-        }
-        catch
-        {
-            // 忽略
-        }
-        if (_recognizer is not null)
-            _recognizer.ContinuousRecognitionSession.ResultGenerated -= OnSpeechResult;
-        _listening = false;
+            InputBox.Text = text;
+            if (string.IsNullOrWhiteSpace(text))
+                BubbleText.Text = "没听清，再说一次？";
+            else
+                BubbleText.Text = $"听写：{text}";
+        });
+    }
 
-        // 听写结束自动发送
+    private void OnRecognizeCompleted(object? sender, RecognizeCompletedEventArgs e)
+    {
+        _listening = false;
+        if (e.Cancelled || e.Error is not null)
+        {
+            if (e.Error is not null)
+                Dispatcher.Invoke(() => BubbleText.Text = $"语音错误：{e.Error.Message}");
+            return;
+        }
+
+        // 识别完成自动发送
         var text = InputBox.Text.Trim();
         if (!string.IsNullOrEmpty(text))
-            await SendAsync();
+            Dispatcher.InvokeAsync(async () => await SendAsync());
     }
 
     // ---- AI Agent（工具调用：启动应用 / 系统信息） ----
@@ -421,7 +424,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         if (string.IsNullOrWhiteSpace(keyword))
             return "缺少应用名称参数";
 
-        var app = StartMenuAppsProvider.Scan()
+        var app = AppsCache.Value
             .FirstOrDefault(a => a.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase));
         if (app is null)
             return $"未找到应用「{keyword}」。可用名称如：记事本、计算器、设置、画图、截图工具。";
@@ -429,6 +432,10 @@ public partial class PetWidgetWindow : WidgetWindowBase
         Process.Start(new ProcessStartInfo(app.LnkPath) { UseShellExecute = true });
         return $"已启动应用「{app.Name}」";
     }
+
+    /// <summary>开始菜单应用缓存（Agent 工具多次调用避免重复全量扫描）。</summary>
+    private static readonly Lazy<IReadOnlyList<StartMenuApp>> AppsCache =
+        new(() => StartMenuAppsProvider.Scan());
 
     private string GetSystemInfo()
     {
@@ -443,7 +450,18 @@ public partial class PetWidgetWindow : WidgetWindowBase
     protected override void OnClosed(System.EventArgs e)
     {
         _dragDetect?.Stop();
-        _recognizer?.Dispose();
+        try
+        {
+            if (_engine is not null)
+            {
+                _engine.RecognizeAsyncCancel();
+                _engine.Dispose();
+            }
+        }
+        catch
+        {
+            // 释放语音引擎失败不影响退出
+        }
         _stats.Dispose();
         _ai.Dispose();
         base.OnClosed(e);

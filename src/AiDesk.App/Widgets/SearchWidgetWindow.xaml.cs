@@ -42,6 +42,13 @@ public partial class SearchWidgetWindow : WidgetWindowBase
             if (IsLoaded)
                 Close();
         };
+
+        // Esc 关闭
+        KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+                Close();
+        };
     }
 
     protected override void OnWidgetLoaded() => SearchBox.Focus();

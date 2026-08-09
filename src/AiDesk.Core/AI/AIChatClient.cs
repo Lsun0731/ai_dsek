@@ -43,8 +43,18 @@ public sealed record AITool
 /// </summary>
 public sealed class AIChatClient : IDisposable
 {
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(60) };
+    private readonly HttpClient _http;
     private const int MaxToolRounds = 4;
+
+    public AIChatClient() : this(new HttpClientHandler())
+    {
+    }
+
+    /// <summary>注入自定义 handler（测试用）。</summary>
+    public AIChatClient(HttpMessageHandler handler)
+    {
+        _http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(60) };
+    }
 
     /// <summary>发送单轮对话，返回回复内容。失败返回带 Error 的回复。</summary>
     public async Task<AIChatReply> ChatAsync(AIChatSettings settings, string userMessage,
@@ -151,67 +161,47 @@ public sealed class AIChatClient : IDisposable
                 });
             }
 
+            var payload = new JsonObject
+            {
+                ["model"] = settings.Model,
+                ["messages"] = messages,
+                ["max_tokens"] = 800,
+            };
+            if (tools.Count > 0)
+                payload["tools"] = toolsJson;
+
             for (var round = 0; round < MaxToolRounds; round++)
             {
-                var payload = new JsonObject
+                var reply = await SendOnceAsync(settings, payload);
+                if (reply.Error is not null)
+                    return new AIChatReply { Error = reply.Error };
+                if (reply.ToolCallsRequested)
                 {
-                    ["model"] = settings.Model,
-                    ["messages"] = messages,
-                    ["max_tokens"] = 800,
-                };
-                if (tools.Count > 0)
-                    payload["tools"] = toolsJson;
-
-                using var request = new HttpRequestMessage(HttpMethod.Post,
-                    $"{settings.BaseUrl.TrimEnd('/')}/chat/completions");
-                request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {settings.ApiKey}");
-                request.Content = new StringContent(
-                    payload.ToJsonString(), Encoding.UTF8, "application/json");
-
-                using var response = await _http.SendAsync(request, ct);
-                var body = await response.Content.ReadAsStringAsync(ct);
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new AIChatReply
+                    // 协议要求：先回传带 tool_calls 的 assistant 消息，再回传各 tool 结果
+                    if (reply.AssistantMessage is not null)
+                        messages.Add(reply.AssistantMessage);
+                    foreach (var call in reply.ToolCalls!)
                     {
-                        Error = $"API 错误 {(int)response.StatusCode}: {Truncate(body, 200)}",
-                    };
-                }
-
-                using var doc = JsonDocument.Parse(body);
-                var root = doc.RootElement;
-                if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
-                    return new AIChatReply { Content = string.Empty };
-
-                var message = choices[0].GetProperty("message");
-
-                // 模型请求工具调用
-                if (message.TryGetProperty("tool_calls", out var toolCalls) && toolCalls.GetArrayLength() > 0)
-                {
-                    messages.Add(JsonNode.Parse(message.GetRawText())!.AsObject());
-                    foreach (var call in toolCalls.EnumerateArray())
-                    {
-                        var callId = call.GetProperty("id").GetString() ?? "";
-                        var fn = call.GetProperty("function");
-                        var name = fn.GetProperty("name").GetString() ?? "";
-                        var args = fn.TryGetProperty("arguments", out var a) ? a.GetString() ?? "{}" : "{}";
-                        var result = executor(name, args); // 执行工具（同步回调，App 层实现）
+                        var result = executor(call.Name, call.Arguments); // 执行工具（同步回调，App 层实现）
                         messages.Add(new JsonObject
                         {
                             ["role"] = "tool",
-                            ["tool_call_id"] = callId,
+                            ["tool_call_id"] = call.Id,
                             ["content"] = result,
                         });
                     }
                     continue;
                 }
-
-                // 最终文字回复
-                var content = message.TryGetProperty("content", out var c) ? c.GetString() : null;
-                return new AIChatReply { Content = content ?? string.Empty };
+                return new AIChatReply { Content = reply.Content ?? string.Empty };
             }
 
-            return new AIChatReply { Error = "工具调用轮次过多" };
+            // 工具轮次用尽：再请求一次（携带全部工具结果），若模型仍要工具则放弃
+            var final = await SendOnceAsync(settings, payload);
+            if (final.Error is not null)
+                return new AIChatReply { Error = final.Error };
+            return final.ToolCallsRequested
+                ? new AIChatReply { Error = "工具调用轮次过多" }
+                : new AIChatReply { Content = final.Content ?? string.Empty };
         }
         catch (OperationCanceledException)
         {
@@ -221,6 +211,54 @@ public sealed class AIChatClient : IDisposable
         {
             return new AIChatReply { Error = $"请求失败: {ex.Message}" };
         }
+    }
+
+    private sealed record ToolCallInfo(string Id, string Name, string Arguments);
+
+    private sealed record SendResult(string? Content, bool ToolCallsRequested,
+        List<ToolCallInfo>? ToolCalls, string? Error, JsonObject? AssistantMessage = null);
+
+    private async Task<SendResult> SendOnceAsync(AIChatSettings settings, JsonObject payload)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post,
+            $"{settings.BaseUrl.TrimEnd('/')}/chat/completions");
+        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {settings.ApiKey}");
+        request.Content = new StringContent(
+            payload.ToJsonString(), Encoding.UTF8, "application/json");
+
+        using var response = await _http.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            return new SendResult(null, false, null,
+                $"API 错误 {(int)response.StatusCode}: {Truncate(body, 200)}");
+        }
+
+        using var doc = JsonDocument.Parse(body);
+        var root = doc.RootElement;
+        if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
+            return new SendResult(string.Empty, false, null, null);
+
+        var message = choices[0].GetProperty("message");
+
+        // 模型请求工具调用
+        if (message.TryGetProperty("tool_calls", out var toolCalls) && toolCalls.GetArrayLength() > 0)
+        {
+            var calls = new List<ToolCallInfo>();
+            foreach (var call in toolCalls.EnumerateArray())
+            {
+                var callId = call.GetProperty("id").GetString() ?? "";
+                var fn = call.GetProperty("function");
+                var name = fn.GetProperty("name").GetString() ?? "";
+                var args = fn.TryGetProperty("arguments", out var a) ? a.GetString() ?? "{}" : "{}";
+                calls.Add(new ToolCallInfo(callId, name, args));
+            }
+            return new SendResult(null, true, calls, null,
+                JsonNode.Parse(message.GetRawText())!.AsObject());
+        }
+
+        var content = message.TryGetProperty("content", out var c) ? c.GetString() : null;
+        return new SendResult(content ?? string.Empty, false, null, null);
     }
 
     public void Dispose() => _http.Dispose();
