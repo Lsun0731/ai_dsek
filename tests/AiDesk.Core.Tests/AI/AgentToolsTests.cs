@@ -94,4 +94,47 @@ public class AgentToolsTests
         var result = AgentTools.Execute("open_system_settings", """{"page":"hack"}""");
         Assert.Contains("不支持的设置页", result);
     }
+
+    [Fact]
+    public void Tools_包含联网搜索与复合工具()
+    {
+        var names = AgentTools.Tools.Select(t => t.Name).ToList();
+        Assert.Contains("web_search", names);
+        Assert.Contains("computer_health_check", names);
+        Assert.Contains("cleanup_computer", names);
+        Assert.True(AgentTools.Tools.First(t => t.Name == "cleanup_computer").RequireConfirm);
+    }
+
+    [Fact]
+    public void ParseBingResults_解析结果块()
+    {
+        const string html = """
+            <html><body>
+            <li class="b_algo"><h2><a href="https://example.com/a">标题 A</a></h2><p>摘要 <b>A</b></p></li>
+            <li class="b_algo b_attribution"><h2><a href="https://example.com/b">标题 B</a></h2><p>摘要 B</p></li>
+            <li class="b_pag">分页无关</li>
+            </body></html>
+            """;
+        var results = AgentTools.ParseBingResults(html);
+
+        Assert.Equal(2, results.Count);
+        Assert.Contains("标题 A", results[0]);
+        Assert.Contains("https://example.com/a", results[0]);
+        Assert.Contains("标题 B", results[1]); // b_algo b_attribution 变体也匹配
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_联网搜索_缺参数报错()
+    {
+        var result = await AgentTools.ExecuteAsync("web_search", "{}");
+        Assert.Contains("query", result);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_电脑体检_返回报告()
+    {
+        var result = await AgentTools.ExecuteAsync("computer_health_check", "{}");
+        Assert.Contains("操作系统", result);
+        Assert.DoesNotContain("工具执行失败", result);
+    }
 }

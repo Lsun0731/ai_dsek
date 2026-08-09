@@ -173,9 +173,17 @@ public static partial class AgentTools
     /// <summary>执行工具调用（异步入口，供 Agent 循环使用）；危险工具先弹确认框。</summary>
     public static Task<string> ExecuteAsync(string name, string argumentsJson)
     {
-        if (name == "web_search")
-            return ExecuteWebSearchAsync(argumentsJson);
-        return Task.FromResult(Execute(name, argumentsJson));
+        switch (name)
+        {
+            case "web_search":
+                return ExecuteWebSearchAsync(argumentsJson);
+            case "computer_health_check":
+                return ExecuteHealthCheckAsync();
+            case "cleanup_computer":
+                return ExecuteCleanupComputerAsync();
+            default:
+                return Task.FromResult(Execute(name, argumentsJson));
+        }
     }
 
     /// <summary>执行工具调用（同步）；危险工具先弹确认框。</summary>

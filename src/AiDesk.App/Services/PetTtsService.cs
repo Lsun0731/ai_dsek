@@ -62,8 +62,9 @@ public static class PetTtsService
     {
         var tmpDir = Path.Combine(Path.GetTempPath(), "AiDeskTts");
         Directory.CreateDirectory(tmpDir);
-        var textFile = Path.Combine(tmpDir, "input.txt");
-        var mediaFile = Path.Combine(tmpDir, $"tts_{Environment.ProcessId}_{Interlocked.Increment(ref _speakSeq)}.mp3");
+        var seq = Interlocked.Increment(ref _speakSeq);
+        var textFile = Path.Combine(tmpDir, $"input_{seq}.txt");
+        var mediaFile = Path.Combine(tmpDir, $"tts_{Environment.ProcessId}_{seq}.mp3");
 
         try
         {

@@ -358,21 +358,9 @@ public static partial class AgentTools
 
         try
         {
-            var url = $"https://www.bing.com/search?q={Uri.EscapeDataString(query)}&setlang=zh-CN&count=8";
+            var url = $"https://www.bing.com/search?q={Uri.EscapeDataString(query)}&setlang=zh-CN&count=5";
             var html = await SearchHttp.GetStringAsync(url);
-
-            var results = new List<string>();
-            foreach (Match m in Regex.Matches(html, "<li class=\"b_algo\".*?</li>", RegexOptions.Singleline))
-            {
-                var block = m.Value;
-                var link = Regex.Match(block, "href=\"(http[^\"]+)\"").Groups[1].Value;
-                var title = Regex.Match(block, "<h2[^>]*>(.*?)</h2>", RegexOptions.Singleline).Groups[1].Value;
-                var snippet = Regex.Match(block, "<p[^>]*>(.*?)</p>", RegexOptions.Singleline).Groups[1].Value;
-                title = WebUtility.HtmlDecode(Regex.Replace(title, "<[^>]+>", ""));
-                snippet = WebUtility.HtmlDecode(Regex.Replace(snippet, "<[^>]+>", ""));
-                if (link.Length > 0 && title.Length > 0)
-                    results.Add($"{title}｜{link}｜{snippet}".TrimEnd('｜'));
-            }
+            var results = ParseBingResults(html);
 
             if (results.Count == 0)
                 return $"未搜索到「{query}」的结果";
@@ -384,9 +372,29 @@ public static partial class AgentTools
         }
     }
 
+    /// <summary>解析 Bing 搜索结果 HTML（可单测）。</summary>
+    public static List<string> ParseBingResults(string html)
+    {
+        var results = new List<string>();
+        foreach (Match m in Regex.Matches(html, "<li class=\"b_algo[^\"]*\".*?</li>", RegexOptions.Singleline))
+        {
+            var block = m.Value;
+            var link = Regex.Match(block, "href=\"(http[^\"]+)\"").Groups[1].Value;
+            var title = Regex.Match(block, "<h2[^>]*>(.*?)</h2>", RegexOptions.Singleline).Groups[1].Value;
+            var snippet = Regex.Match(block, "<p[^>]*>(.*?)</p>", RegexOptions.Singleline).Groups[1].Value;
+            title = WebUtility.HtmlDecode(Regex.Replace(title, "<[^>]+>", ""));
+            snippet = WebUtility.HtmlDecode(Regex.Replace(snippet, "<[^>]+>", ""));
+            if (link.Length > 0 && title.Length > 0)
+                results.Add($"{title}｜{link}｜{snippet}".TrimEnd('｜'));
+        }
+        return results;
+    }
+
     // ---- 任务规划（复合工具） ----
 
-    /// <summary>电脑体检：汇总系统/磁盘/内存/网络健康报告。</summary>
+    /// <summary>电脑体检：汇总系统/磁盘/内存/网络健康报告（异步，避免阻塞 UI）。</summary>
+    private static Task<string> ExecuteHealthCheckAsync() => Task.Run(ExecuteHealthCheck);
+
     private static string ExecuteHealthCheck()
     {
         var sb = new StringBuilder();
@@ -405,7 +413,9 @@ public static partial class AgentTools
         return sb.ToString();
     }
 
-    /// <summary>一键清理：临时文件 + 回收站。</summary>
+    /// <summary>一键清理：临时文件 + 回收站（异步，避免遍历删除阻塞 UI）。</summary>
+    private static Task<string> ExecuteCleanupComputerAsync() => Task.Run(ExecuteCleanupComputer);
+
     private static string ExecuteCleanupComputer()
     {
         var report = new List<string>();
@@ -441,8 +451,8 @@ public static partial class AgentTools
         // 2) 回收站
         try
         {
-            SHEmptyRecycleBin(IntPtr.Zero, null, SherbNoConfirmation | SherbNoProgressUi | SherbNoSound);
-            report.Add("回收站已清空");
+            var hr = SHEmptyRecycleBin(IntPtr.Zero, null, SherbNoConfirmation | SherbNoProgressUi | SherbNoSound);
+            report.Add(hr == 0 ? "回收站已清空" : $"回收站清空失败（错误码 {hr}）");
         }
         catch (Exception ex)
         {
@@ -452,7 +462,7 @@ public static partial class AgentTools
         return "清理完成：" + string.Join("；", report);
     }
 
-    [System.Runtime.InteropServices.DllImport("shell32.dll")]
+    [System.Runtime.InteropServices.DllImport("shell32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
     private static extern int SHEmptyRecycleBin(IntPtr hwnd, string? pszRootPath, uint dwFlags);
 
     private const uint SherbNoConfirmation = 0x1;

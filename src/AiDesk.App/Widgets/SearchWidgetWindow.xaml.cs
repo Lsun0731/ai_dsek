@@ -118,9 +118,12 @@ public partial class SearchWidgetWindow : WidgetWindowBase
             return;
         VoiceStatus.Text = "播放中…";
         var usedEdge = await PetTtsService.SpeakAsync("你好，我是你的桌面助手，你觉得这个声音怎么样？");
-        VoiceStatus.Text = usedEdge
-            ? "edge 在线音色"
-            : "已回退系统语音（edge 不可用，检查网络或 python）";
+        if (voice.StartsWith("edge:"))
+            VoiceStatus.Text = usedEdge
+                ? "edge 在线音色"
+                : "已回退系统语音（edge 不可用，检查网络或 python）";
+        else
+            VoiceStatus.Text = "系统语音（离线）";
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
