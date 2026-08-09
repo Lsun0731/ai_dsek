@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using AiDesk.App.SecondDesktop;
+using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
 
 namespace AiDesk.App;
@@ -10,6 +12,11 @@ namespace AiDesk.App;
 /// </summary>
 public partial class App : Application
 {
+    private TrayIconService? _tray;
+    private HotKeyService? _hotKey;
+    private SecondDesktopController? _secondDesktop;
+    private MainWindow? _mainWindow;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -27,7 +34,39 @@ public partial class App : Application
             args.SetObserved();
         };
 
+        // 第二桌面 + 托盘 + 全局热键（Ctrl+Alt+D 呼出）
+        _secondDesktop = new SecondDesktopController();
+        _hotKey = new HotKeyService(1);
+        if (!_secondDesktop.RegisterHotKey(_hotKey))
+            Telemetry.Info("App", "全局热键 Ctrl+Alt+D 注册失败（可能被占用）");
+
+        _tray = new TrayIconService();
+        _tray.ShowSecondDesktopRequested += () => _secondDesktop.Enter();
+        _tray.ShowMainWindowRequested += ShowMainWindow;
+        _tray.ExitRequested += () => Shutdown();
+
+        // 主窗口（去掉 StartupUri，手动创建以便持有引用）
+        _mainWindow = new MainWindow();
+        _mainWindow.Show();
+
         Exit += (_, _) => Telemetry.Info("App", "应用退出");
+        Exit += (_, _) => Cleanup();
+    }
+
+    private void ShowMainWindow()
+    {
+        if (_mainWindow is null)
+            return;
+        _mainWindow.Show();
+        _mainWindow.Activate();
+        if (_mainWindow.WindowState == WindowState.Minimized)
+            _mainWindow.WindowState = WindowState.Normal;
+    }
+
+    private void Cleanup()
+    {
+        _hotKey?.Dispose();
+        _tray?.Dispose();
     }
 
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
