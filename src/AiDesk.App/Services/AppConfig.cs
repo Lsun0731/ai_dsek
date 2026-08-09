@@ -17,9 +17,6 @@ public static class AppConfig
     /// <summary>旧小组件配置路径。</summary>
     private static readonly string LegacyWidgetPath = Path.Combine(ConfigDir, "config.json");
 
-    /// <summary>旧 Dock 配置路径。</summary>
-    private static readonly string LegacyDockPath = Path.Combine(ConfigDir, "dock.json");
-
     public static AppSettings Load()
     {
         try
@@ -88,26 +85,6 @@ public static class AppConfig
             // 忽略损坏的旧配置
         }
 
-        // 旧 Dock 配置：Enabled / HideTaskbar / HideIcons
-        try
-        {
-            if (File.Exists(LegacyDockPath))
-            {
-                var json = File.ReadAllText(LegacyDockPath);
-                var legacy = JsonSerializer.Deserialize<LegacyDockSettings>(json);
-                if (legacy is not null)
-                {
-                    settings.Dock.Enabled = legacy.Enabled;
-                    settings.Dock.HideTaskbar = legacy.HideTaskbar;
-                    settings.Dock.HideIcons = legacy.HideIcons;
-                }
-            }
-        }
-        catch
-        {
-            // 忽略损坏的旧配置
-        }
-
         Save(settings); // 迁移完成后写主配置
         return settings;
     }
@@ -117,12 +94,5 @@ public static class AppConfig
         public double Opacity { get; set; } = 0.9;
         public string WeatherCity { get; set; } = "北京";
         public Dictionary<string, WidgetState>? Widgets { get; set; }
-    }
-
-    private sealed class LegacyDockSettings
-    {
-        public bool Enabled { get; set; } = true;
-        public bool HideTaskbar { get; set; } = true;
-        public bool HideIcons { get; set; }
     }
 }

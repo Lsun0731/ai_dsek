@@ -27,19 +27,6 @@ public sealed class WidgetState
     public bool IsOpen { get; set; }
 }
 
-/// <summary>桌面 Dock 集成设置。</summary>
-public sealed class DockSettings
-{
-    /// <summary>启用桌面 Dock（磁贴条）。</summary>
-    public bool Enabled { get; set; } = true;
-
-    /// <summary>隐藏系统任务栏（默认隐藏，用 Dock 替代）。</summary>
-    public bool HideTaskbar { get; set; } = true;
-
-    /// <summary>隐藏桌面图标。</summary>
-    public bool HideIcons { get; set; }
-}
-
 /// <summary>应用统一配置（全部模块共用一份 settings.json）。</summary>
 public sealed class AppSettings
 {
@@ -51,9 +38,6 @@ public sealed class AppSettings
 
     /// <summary>各小组件状态（按类型名）。</summary>
     public Dictionary<string, WidgetState> Widgets { get; set; } = new();
-
-    /// <summary>桌面 Dock 设置。</summary>
-    public DockSettings Dock { get; set; } = new();
 
     public WidgetState GetState(WidgetKind kind)
     {

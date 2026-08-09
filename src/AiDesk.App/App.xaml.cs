@@ -1,7 +1,7 @@
 ﻿using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
-using AiDesk.App.DesktopDock;
 using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
 
@@ -33,8 +33,13 @@ public partial class App : Application
             args.SetObserved();
         };
 
-        // 桌面集成（Dock + 任务栏/图标开关），按配置立即应用
-        DesktopIntegrationController.Initialize();
+        // 首机会异常：捕获 AccessViolation 等致命异常的调用栈（AV 不触发 UnhandledException）
+        AppDomain.CurrentDomain.FirstChanceException += (_, args) =>
+        {
+            if (args.Exception is AccessViolationException or SEHException or NullReferenceException
+                or InvalidOperationException or ArgumentException)
+                Telemetry.Error("FirstChance", args.Exception);
+        };
 
         // 全局热键 Ctrl+Alt+D：呼出/隐藏搜索小组件
         _hotKey = new HotKeyService(1);
@@ -75,8 +80,6 @@ public partial class App : Application
 
     private void Cleanup()
     {
-        // 恢复任务栏/图标（explorer 独立进程，隐藏状态会残留）
-        DesktopIntegrationController.Instance?.Cleanup();
         _hotKey?.Dispose();
         _tray?.Dispose();
     }

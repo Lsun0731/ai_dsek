@@ -21,9 +21,6 @@
         <DataTemplate DataType="{x:Type vm:WidgetViewModel}">
             <views:WidgetPage />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:DesktopDockViewModel}">
-            <views:DesktopDockPage />
-        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
             <views:PlaceholderPage />
         </DataTemplate>

@@ -24,7 +24,6 @@ public partial class MainViewModel : ObservableObject
 
         // ===== 桌面工具（核心） =====
         NavItems.Add(new NavItem("桌面工具", null, isGroup: true));
-        NavItems.Add(new NavItem("桌面 Dock", "\uE7C4", new DesktopDockViewModel()));
         NavItems.Add(new NavItem("桌面小组件", "\uE823", new WidgetViewModel()));
         NavItems.Add(new NavItem("外观美化", "\uE7B8", new DesktopViewModel()));
 
