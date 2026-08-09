@@ -29,6 +29,9 @@ public abstract class WidgetWindowBase : Window
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
     private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
     protected WidgetWindowBase(WidgetKind kind)
     {
         _kind = kind;
@@ -59,6 +62,9 @@ public abstract class WidgetWindowBase : Window
             exStyle |= WS_EX_TOOLWINDOW;
             exStyle &= ~WS_EX_APPWINDOW;
             SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(exStyle));
+            // 通知系统样式已变更（SWP_NOSIZE|SWP_NOMOVE|SWP_FRAMECHANGED）
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+                (uint)(0x0001 | 0x0002 | 0x0020));
         }
         catch (Exception ex)
         {
@@ -130,11 +136,13 @@ public abstract class WidgetWindowBase : Window
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         _ticker?.Stop();
-        _state.Left = Left;
-        _state.Top = Top;
-        _state.IsOpen = false;
-        _settings.Widgets[_kind.ToString()] = _state;
-        WidgetConfig.Save(_settings);
+        // 重新加载磁盘最新配置：只更新本小组件的位置/开关，避免用构造时的旧快照覆写全局设置（透明度/城市）
+        var settings = WidgetConfig.Load();
+        var state = settings.GetState(_kind);
+        state.Left = Left;
+        state.Top = Top;
+        state.IsOpen = false;
+        WidgetConfig.Save(settings);
         Telemetry.Event("Widget", $"关闭 {_kind}");
     }
 }

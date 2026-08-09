@@ -86,6 +86,9 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
                 SetOpenFlagSilently(kind, false);
             };
             _windows[kind] = window;
+            // 持久化打开状态，重启后记住已打开的组件
+            _settings.GetState(kind).IsOpen = true;
+            WidgetConfig.Save(_settings);
             window.Show();
             Telemetry.Event("Widget", $"打开 {kind}");
         }
@@ -116,7 +119,8 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        foreach (var window in _windows.Values)
+        // ToList 防止 Close 触发 Closed→Remove 导致迭代期修改集合
+        foreach (var window in _windows.Values.ToList())
             window.Close();
         _windows.Clear();
         GC.SuppressFinalize(this);

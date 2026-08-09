@@ -112,7 +112,9 @@ public sealed class WeatherService : IDisposable
     }
 
     private static double GetDouble(JsonElement e, string name, double fallback = 0) =>
-        e.TryGetProperty(name, out var v) && double.TryParse(v.GetString(), out var d) ? d : fallback;
+        e.TryGetProperty(name, out var v) &&
+        double.TryParse(v.GetString(), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : fallback;
 
     private static int GetInt(JsonElement e, string name, int fallback = 0) =>
         e.TryGetProperty(name, out var v) && int.TryParse(v.GetString(), out var i) ? i : fallback;

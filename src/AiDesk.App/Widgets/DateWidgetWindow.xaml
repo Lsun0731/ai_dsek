@@ -2,9 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:widgets="clr-namespace:AiDesk.App.Widgets"
-        Title="日期" Width="200" SizeToContent="Height" MouseLeftButtonDown="OnDrag">
+        Title="日期" Width="200" SizeToContent="Height">
 
-    <Border Style="{StaticResource WidgetCard}" MouseLeftButtonDown="OnDrag">
+    <Border Style="{StaticResource WidgetCard}">
         <Grid>
             <StackPanel>
                 <TextBlock x:Name="WeekText" Text="星期日" FontSize="14" Foreground="#CCFFFFFF" />
