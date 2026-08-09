@@ -14,6 +14,9 @@
         <DataTemplate DataType="{x:Type vm:ContextMenuViewModel}">
             <views:ContextMenuPage />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DesktopViewModel}">
+            <views:DesktopPage />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
             <views:PlaceholderPage />
         </DataTemplate>

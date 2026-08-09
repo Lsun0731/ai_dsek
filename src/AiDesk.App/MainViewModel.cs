@@ -26,7 +26,7 @@ public partial class MainViewModel : ObservableObject
         NavItems.Add(new NavItem("注册表管理", "\uE943", new PlaceholderViewModel("注册表管理（开发中）")));
 
         NavItems.Add(new NavItem("桌面美化", null, isGroup: true));
-        NavItems.Add(new NavItem("外观美化", "\uE7B8", new PlaceholderViewModel("桌面美化（开发中）")));
+        NavItems.Add(new NavItem("外观美化", "\uE7B8", new DesktopViewModel()));
 
         NavItems.Add(new NavItem("设置", "\uE713", new PlaceholderViewModel("设置（开发中）"), isBottom: true));
 
