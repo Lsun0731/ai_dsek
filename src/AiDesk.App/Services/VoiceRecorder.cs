@@ -17,6 +17,7 @@ public sealed class VoiceRecorder : IDisposable
     private WaveFileWriter? _writer;
     private string? _outputPath;
     private DateTime _lastSoundAt;
+    private bool _hasVoice;   // 录音期间是否检测到有效人声（VAD：全程静音直接丢弃，防 whisper 幻觉）
     private System.Threading.Timer? _silenceTimer;
     private bool _stopped;
 
@@ -89,13 +90,17 @@ public sealed class VoiceRecorder : IDisposable
         }
         var rms = Math.Sqrt(sum / (double)(e.BytesRecorded / 2 + 1));
         if (rms > 800)
+        {
             _lastSoundAt = DateTime.UtcNow;
+            _hasVoice = true;
+        }
     }
 
     private void OnRecordingStopped(object? sender, StoppedEventArgs e)
     {
         var path = _outputPath;
-        var ok = e.Exception is null && path is not null;
+        // 全程无有效人声（静音/纯噪声）→ 丢弃，不送识别（whisper 会对静音幻觉出文本）
+        var ok = e.Exception is null && path is not null && _hasVoice;
         if (ok)
         {
             try

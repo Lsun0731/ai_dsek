@@ -173,6 +173,8 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         settings.AI.Voice = voice;
         AppConfig.Save(settings);
         Telemetry.Event("Search", $"切换音色 {voice}");
+        // 新音色提示音后台预热（下次唤醒零延迟）
+        _ = PetTtsService.EnsurePromptCachedAsync();
     }
 
     private async void OnVoicePreviewClick(object sender, RoutedEventArgs e)

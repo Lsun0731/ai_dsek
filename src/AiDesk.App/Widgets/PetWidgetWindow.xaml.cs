@@ -91,10 +91,12 @@ public partial class PetWidgetWindow : WidgetWindowBase
         {
             StartWakeListen();
             // 后台检测 whisper 可用性（python + faster_whisper + 模型），就绪后听写走离线识别
-            _ = Task.Run(() =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
+                    // 提示音预生成缓存（唤醒时零网络延迟）
+                    await PetTtsService.EnsurePromptCachedAsync();
                     _whisper.CheckAvailability();
                     if (_whisper.IsAvailable)
                         Telemetry.Info("Pet.Whisper", "离线识别就绪");
@@ -316,12 +318,12 @@ public partial class PetWidgetWindow : WidgetWindowBase
         _ = PromptAndListenAsync();
     }
 
-    /// <summary>播提示音 → 开始录音/听写。</summary>
+    /// <summary>播提示音（本地缓存即时播放）→ 开始录音/听写。</summary>
     private async Task PromptAndListenAsync()
     {
         try
         {
-            await PetTtsService.SpeakAsync("我在，请说");
+            await PetTtsService.PlayPromptAsync();
         }
         catch
         {
@@ -333,6 +335,8 @@ public partial class PetWidgetWindow : WidgetWindowBase
         if (_whisper.IsAvailable)
         {
             // whisper 路径：录音 → 静音自动停止 → 离线转写（准确率高）
+            // 录音期间监听打断词（算了/停止/不说了…）→ 立即取消回待命
+            StartCancelListen();
             _recorder.Completed += OnWhisperRecorded;
             _recorder.Start();
         }
@@ -348,10 +352,73 @@ public partial class PetWidgetWindow : WidgetWindowBase
         }
     }
 
+    /// <summary>录音期间监听打断词（算了/停止/不说了…）——命中即取消本轮听写。</summary>
+    private void StartCancelListen()
+    {
+        try
+        {
+            var engine = new SpeechRecognitionEngine(new CultureInfo("zh-CN"));
+            var choices = new Choices("算了", "停止", "不说了", "别说了", "取消", "取消听写", "不要了");
+            engine.LoadGrammar(new Grammar(choices));
+            engine.SpeechRecognized += (_, e) =>
+            {
+                var text = e.Result?.Text ?? "";
+                if (!string.IsNullOrWhiteSpace(text) && _phase == SpeechPhase.Dictate)
+                    Dispatcher.Invoke(CancelDictation);
+            };
+            engine.RecognizeAsync(RecognizeMode.Single);
+            _currentEngine = engine;
+        }
+        catch
+        {
+            // 打断词监听失败不影响录音
+        }
+    }
+
+    /// <summary>取消本轮听写：停止提示音/录音/监听，回待命。</summary>
+    private void CancelDictation()
+    {
+        try
+        {
+            _recorder.Stop();
+        }
+        catch
+        {
+            // 忽略
+        }
+        PetTtsService.Stop();
+        try
+        {
+            _currentEngine?.RecognizeAsyncCancel();
+            _currentEngine?.Dispose();
+        }
+        catch
+        {
+            // 忽略
+        }
+        _currentEngine = null;
+        _phase = SpeechPhase.None;
+        _listenRetries = 0;
+        _inConversation = false;
+        BubbleText.Text = "好的～";
+        StartWakeListen();
+    }
+
     /// <summary>录音完成回调（whisper 路径）：置信度过滤 → 转写 → 交给 AI。</summary>
     private void OnWhisperRecorded(string? wavPath)
     {
         _recorder.Completed -= OnWhisperRecorded;
+        // 停止打断词监听（录音已结束）
+        try
+        {
+            _currentEngine?.RecognizeAsyncCancel();
+            _currentEngine?.Dispose();
+        }
+        catch
+        {
+            // 忽略
+        }
+        _currentEngine = null;
         _phase = SpeechPhase.None;
         if (wavPath is null)
         {
@@ -624,6 +691,13 @@ public partial class PetWidgetWindow : WidgetWindowBase
                 PetTtsService.Stop();
                 StopInterruptListen();
                 BubbleText.Text = "好的，请说…";
+            }
+            // 听写/录音/提示音阶段点击 = 取消本轮听写回待命（中途可打断）
+            else if (_phase == SpeechPhase.Dictate)
+            {
+                CancelDictation();
+                base.OnMouseLeftButtonUp(e);
+                return;
             }
             _inConversation = true; // 点击宠物 = 进入对话窗口并听写（等效唤醒词）
             _lastActivity = DateTime.Now;

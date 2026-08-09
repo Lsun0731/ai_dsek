@@ -103,17 +103,12 @@ public static class PetTtsService
     /// <summary>edge-tts 生成并播放，播放完成后返回；成功返回 true。</summary>
     private static async Task<bool> TrySpeakEdgeAsync(string text, string voiceId)
     {
-        // 配置存的是带前缀的 ID（edge:zh-CN-...），命令行需要纯音色名
-        var voiceName = voiceId.StartsWith("edge:", StringComparison.Ordinal)
-            ? voiceId["edge:".Length..]
-            : voiceId;
         var tmpDir = Path.Combine(Path.GetTempPath(), "AiDeskTts");
         Directory.CreateDirectory(tmpDir);
         var seq = Interlocked.Increment(ref _speakSeq);
-        var textFile = Path.Combine(tmpDir, $"input_{seq}.txt");
         var mediaFile = Path.Combine(tmpDir, $"tts_{Environment.ProcessId}_{seq}.mp3");
 
-        // 清理本进程早前的临时 mp3（MediaPlayer 已 Close 的旧文件可删；正在播放的被锁自动跳过）
+        // 清理本进程早前的临时 mp3（MediaPlayer 已 Close 的旧文件可删；正在播放的被锁自动跳过；保留 prompt_ 缓存）
         try
         {
             foreach (var stale in Directory.EnumerateFiles(tmpDir, $"tts_{Environment.ProcessId}_*.mp3"))
@@ -125,6 +120,24 @@ public static class PetTtsService
         {
             // 忽略清理失败
         }
+
+        if (!await SynthesizeEdgeMp3Async(text, voiceId, mediaFile))
+            return false;
+        await PlayFileAsync(mediaFile);
+        return true;
+    }
+
+    /// <summary>edge-tts 生成 mp3 到指定路径（不播放）；成功返回 true。</summary>
+    private static async Task<bool> SynthesizeEdgeMp3Async(string text, string voiceId, string mediaFile)
+    {
+        // 配置存的是带前缀的 ID（edge:zh-CN-...），命令行需要纯音色名
+        var voiceName = voiceId.StartsWith("edge:", StringComparison.Ordinal)
+            ? voiceId["edge:".Length..]
+            : voiceId;
+        var tmpDir = Path.Combine(Path.GetTempPath(), "AiDeskTts");
+        Directory.CreateDirectory(tmpDir);
+        var seq = Interlocked.Increment(ref _speakSeq);
+        var textFile = Path.Combine(tmpDir, $"input_{seq}.txt");
 
         try
         {
@@ -153,14 +166,7 @@ public static class PetTtsService
                     $"exit={process.ExitCode} voice={voiceName} err={stderr.Trim()} out={stdout.Trim()}");
                 return false;
             }
-
-            // 播放（停止上一次），并等待播放完成（调用方据此恢复语音监听，防回声自触发）
-            _player?.Close();
-            _player = new MediaPlayer();
-            _player.Open(new Uri(mediaFile));
-            _player.Play();
             Telemetry.Function("Pet.TtsEdge", true, 0, $"voice={voiceId} len={text.Length}");
-            await WaitPlaybackEndAsync(_player, TimeSpan.FromSeconds(60));
             return true;
         }
         catch (Exception ex)
@@ -181,6 +187,67 @@ public static class PetTtsService
                 // 忽略
             }
         }
+    }
+
+    /// <summary>播放本地音频文件并等待结束（可打断）。</summary>
+    private static async Task PlayFileAsync(string file)
+    {
+        _player?.Close();
+        _player = new MediaPlayer();
+        _player.Open(new Uri(file));
+        _player.Play();
+        await WaitPlaybackEndAsync(_player, TimeSpan.FromSeconds(60));
+    }
+
+    /// <summary>提示音缓存路径（按音色区分）。</summary>
+    private static string PromptCachePath(string voiceId)
+    {
+        var voiceName = voiceId.StartsWith("edge:", StringComparison.Ordinal)
+            ? voiceId["edge:".Length..]
+            : voiceId;
+        var hash = Convert.ToHexString(
+            System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(voiceName)))[..8];
+        return Path.Combine(Path.GetTempPath(), "AiDeskTts", $"prompt_{hash}.mp3");
+    }
+
+    /// <summary>确保提示音「我在，请说」已按当前音色缓存（后台预热，唤醒时零网络延迟）。</summary>
+    public static async Task EnsurePromptCachedAsync()
+    {
+        var voice = AppConfig.Load().AI.Voice;
+        if (!voice.StartsWith("edge:", StringComparison.Ordinal))
+            return;
+        var path = PromptCachePath(voice);
+        if (File.Exists(path))
+            return;
+        try
+        {
+            await SynthesizeEdgeMp3Async("我在，请说", voice, path);
+        }
+        catch
+        {
+            // 缓存失败不影响使用（PlayPromptAsync 会现场生成或回退）
+        }
+    }
+
+    /// <summary>播放提示音「我在，请说」：缓存命中即时播放；未命中现场生成；edge 不可用回退系统语音。</summary>
+    public static async Task PlayPromptAsync()
+    {
+        var voice = AppConfig.Load().AI.Voice;
+        if (voice.StartsWith("edge:", StringComparison.Ordinal))
+        {
+            var path = PromptCachePath(voice);
+            if (File.Exists(path))
+            {
+                await PlayFileAsync(path);
+                return;
+            }
+            if (await SynthesizeEdgeMp3Async("我在，请说", voice, path))
+            {
+                await PlayFileAsync(path);
+                return;
+            }
+        }
+        await SpeakSapiAsync("我在，请说");
     }
 
     /// <summary>SAPI 系统语音（离线兜底，中文优先）；等待朗读完成（取消也会触发 SpeakCompleted）。</summary>
