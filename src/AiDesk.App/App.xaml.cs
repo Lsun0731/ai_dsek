@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Windows;
 using System.Windows.Threading;
-using AiDesk.App.SecondDesktop;
+using AiDesk.App.DesktopDock;
 using AiDesk.App.Services;
 using AiDesk.Core.Diagnostics;
 
@@ -14,7 +14,6 @@ public partial class App : Application
 {
     private TrayIconService? _tray;
     private HotKeyService? _hotKey;
-    private SecondDesktopController? _secondDesktop;
     private MainWindow? _mainWindow;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -34,14 +33,18 @@ public partial class App : Application
             args.SetObserved();
         };
 
-        // 第二桌面 + 托盘 + 全局热键（Ctrl+Alt+D 呼出）
-        _secondDesktop = new SecondDesktopController();
+        // 桌面集成（Dock + 任务栏/图标开关），按配置立即应用
+        DesktopIntegrationController.Initialize();
+
+        // 全局热键 Ctrl+Alt+D：呼出应用搜索浮层
         _hotKey = new HotKeyService(1);
-        if (!_secondDesktop.RegisterHotKey(_hotKey))
+        if (!_hotKey.Register(0x2 | 0x1, 0x44)) // MOD_CONTROL|MOD_ALT, VK_D
             Telemetry.Info("App", "全局热键 Ctrl+Alt+D 注册失败（可能被占用）");
+        else
+            _hotKey.Pressed += () => DesktopIntegrationController.Instance?.ShowSearch();
 
         _tray = new TrayIconService();
-        _tray.ShowSecondDesktopRequested += () => _secondDesktop.ToggleOrEnter();
+        _tray.ShowSecondDesktopRequested += () => DesktopIntegrationController.Instance?.ShowSearch();
         _tray.ShowMainWindowRequested += ShowMainWindow;
         _tray.ExitRequested += () => Shutdown();
 
@@ -65,8 +68,8 @@ public partial class App : Application
 
     private void Cleanup()
     {
-        // 若第二桌面模式激活，先恢复任务栏/图标（explorer 独立进程，ShowWindow 状态会残留）
-        _secondDesktop?.Exit();
+        // 恢复任务栏/图标（explorer 独立进程，隐藏状态会残留）
+        DesktopIntegrationController.Instance?.Cleanup();
         _hotKey?.Dispose();
         _tray?.Dispose();
     }

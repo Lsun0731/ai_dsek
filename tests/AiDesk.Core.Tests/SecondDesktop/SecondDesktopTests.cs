@@ -52,3 +52,14 @@ public class DesktopIconHiderTests
         Assert.NotEqual(IntPtr.Zero, hider.GetIconListHandle());
     }
 }
+
+public class DesktopLayerHostTests
+{
+    [Fact]
+    public void FindDesktopWorkerW_不抛异常()
+    {
+        // 窗口站/桌面结构随运行环境而异（bash 宿主与交互桌面隔离），只验证 API 可用不抛异常；
+        // 真实挂载在应用进程（用户交互会话）里执行，失败时降级为普通置顶窗口。
+        _ = DesktopLayerHost.FindDesktopWorkerW();
+    }
+}

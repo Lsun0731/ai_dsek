@@ -27,6 +27,9 @@
         <DataTemplate DataType="{x:Type vm:CursorThemeViewModel}">
             <views:CursorThemePage />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DesktopDockViewModel}">
+            <views:DesktopDockPage />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
             <views:PlaceholderPage />
         </DataTemplate>

@@ -1,0 +1,115 @@
+using AiDesk.App.DesktopDock;
+using AiDesk.App.Services;
+using AiDesk.Core.Diagnostics;
+using AiDesk.Core.SecondDesktop;
+
+namespace AiDesk.App.DesktopDock;
+
+/// <summary>
+/// 桌面集成控制器：管理桌面 Dock 生命周期 + 任务栏/图标隐藏开关。
+/// Dock 挂载到桌面图层（壁纸之上、应用之下），常驻桌面替代任务栏。
+/// </summary>
+public sealed class DesktopIntegrationController
+{
+    private static DesktopIntegrationController? _instance;
+
+    public static DesktopIntegrationController? Instance => _instance;
+
+    /// <summary>应用启动时初始化（只调用一次）。</summary>
+    public static void Initialize()
+    {
+        _instance = new DesktopIntegrationController();
+        _instance.ApplySettings();
+    }
+
+    private readonly TaskbarHider _taskbar = new();
+    private readonly DesktopIconHider _icons = new();
+    private DesktopDockWindow? _dock;
+    private SearchOverlayWindow? _searchOverlay;
+    private DockSettings _settings;
+
+    private DesktopIntegrationController()
+    {
+        _settings = DockConfig.Load();
+    }
+
+    public DockSettings Settings => _settings;
+
+    /// <summary>按当前配置应用：创建/销毁 Dock + 任务栏/图标隐藏状态。</summary>
+    public void ApplySettings()
+    {
+        if (_settings.Enabled && _dock is null)
+        {
+            _dock = new DesktopDockWindow();
+            _dock.Closed += (_, _) => _dock = null;
+            _dock.Show();
+        }
+        else if (!_settings.Enabled && _dock is not null)
+        {
+            _dock.Close();
+            _dock = null;
+        }
+
+        SetTaskbarHidden(_settings.HideTaskbar);
+        SetIconsHidden(_settings.HideIcons);
+    }
+
+    /// <summary>保存设置并立即应用。</summary>
+    public void SaveSettings(DockSettings settings)
+    {
+        _settings = settings;
+        DockConfig.Save(settings);
+        ApplySettings();
+    }
+
+    /// <summary>呼出搜索浮层（全局热键 Ctrl+Alt+D）。Dock 未启用时独立弹出搜索浮层。</summary>
+    public void ShowSearch()
+    {
+        if (_dock is not null)
+        {
+            _dock.ShowSearch();
+            return;
+        }
+        if (_searchOverlay is null)
+        {
+            _searchOverlay = new SearchOverlayWindow();
+            _searchOverlay.Closed += (_, _) => _searchOverlay = null;
+        }
+        _searchOverlay.Show();
+        _searchOverlay.Activate();
+    }
+
+    private void SetTaskbarHidden(bool hide)
+    {
+        try
+        {
+            if (hide) _taskbar.Hide();
+            else _taskbar.Restore();
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Dock.Taskbar", ex);
+        }
+    }
+
+    private void SetIconsHidden(bool hide)
+    {
+        try
+        {
+            if (hide) _icons.Hide();
+            else _icons.Restore();
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Dock.Icons", ex);
+        }
+    }
+
+    /// <summary>应用退出时恢复系统 UI（explorer 独立进程，隐藏状态会残留）。</summary>
+    public void Cleanup()
+    {
+        try { _taskbar.Restore(); } catch { }
+        try { _icons.Restore(); } catch { }
+        _dock?.Close();
+    }
+}
