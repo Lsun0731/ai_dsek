@@ -57,6 +57,13 @@ public sealed class AIChatClient : IDisposable
     private const int MaxToolRounds = 4;
     private const int ToolOutputMaxChars = 2000;
     private const int DoomLoopThreshold = 3;
+    private const int MaxCallsPerRound = 8;
+
+    /// <summary>
+    /// 上下文硬预算：messages 总字符上限（约 60 万 token 安全线，适配 1M 上下文模型；
+    /// 中文约 1 字≈1 token，按 1.2 系数保守估算）。发送前强制裁剪，防止历史/工具结果膨胀触发 400。
+    /// </summary>
+    private const int MaxContextChars = 700_000;
 
     public AIChatClient() : this(new HttpClientHandler())
     {
@@ -88,6 +95,15 @@ public sealed class AIChatClient : IDisposable
                 foreach (var (role, content) in history)
                     messages.Add(new { role, content });
             messages.Add(new { role = "user", content = userMessage });
+
+            // 上下文预算兜底：总字符超限时从最早的历史开始丢弃（保留 system + 最新 user）
+            var totalChars = messages.Sum(m => m.ToString()!.Length);
+            while (messages.Count > 2 && totalChars > MaxContextChars)
+            {
+                var removed = messages[1].ToString()!.Length;
+                messages.RemoveAt(1);
+                totalChars -= removed;
+            }
 
             var payload = new
             {
@@ -181,6 +197,9 @@ public sealed class AIChatClient : IDisposable
             if (tools.Count > 0)
                 payload["tools"] = toolsJson;
 
+            // 每轮发送前强制上下文预算（防御：任何路径的历史/工具膨胀都会在此被截断）
+            EnforceContextBudget(messages);
+
             // Doom-loop 检测：连续相同工具+参数调用
             var recentCalls = new List<(string Name, string Args)>();
             var loopStopped = false;
@@ -197,7 +216,8 @@ public sealed class AIChatClient : IDisposable
                     // 协议要求：先回传带 tool_calls 的 assistant 消息，再回传各 tool 结果
                     if (reply.AssistantMessage is not null)
                         messages.Add(reply.AssistantMessage);
-                    foreach (var call in reply.ToolCalls!)
+                    // 单轮工具调用数上限：超出部分丢弃（模型贪心时防止上下文爆炸）
+                    foreach (var call in reply.ToolCalls!.Take(MaxCallsPerRound))
                     {
                         // Doom-loop：同工具同参数连续 3 次 → 拦截并提示模型换策略（持续拦截直到模型改变）
                         recentCalls.Add((call.Name, call.Arguments));
@@ -256,6 +276,27 @@ public sealed class AIChatClient : IDisposable
     }
 
     private sealed record ToolCallInfo(string Id, string Name, string Arguments);
+
+    /// <summary>
+    /// 上下文预算裁剪：messages 总字符超限时，从最早的消息开始删（保留 system 首条、
+    /// 最新的 user 与最近的 assistant/tool 结果），直到达标。兜底路径，正常对话不会触发。
+    /// </summary>
+    private static void EnforceContextBudget(JsonArray messages)
+    {
+        var total = 0;
+        foreach (var m in messages)
+            total += m.ToJsonString().Length;
+        if (total <= MaxContextChars)
+            return;
+
+        // 从索引 1 起向前删（保留 system + 最新尾部），删到达标为止
+        while (messages.Count > 3 && total > MaxContextChars)
+        {
+            var removed = messages[1].ToJsonString().Length;
+            messages.RemoveAt(1);
+            total -= removed;
+        }
+    }
 
     private sealed record SendResult(string? Content, bool ToolCallsRequested,
         List<ToolCallInfo>? ToolCalls, string? Error, JsonObject? AssistantMessage = null);

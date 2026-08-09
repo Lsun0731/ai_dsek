@@ -190,6 +190,36 @@ public class AIChatClientTests
         Assert.Equal(2, handler.RequestBodies.Count); // 1 次失败 + 1 次重试
     }
 
+    /// <summary>上下文预算兜底：超长历史发送前裁剪，保留 system 与最新 user。</summary>
+    [Fact]
+    public void EnforceContextBudget_超长历史_裁剪并保留首尾()
+    {
+        var big = new string('大', 300_000); // 30 万字符 × 多轮 = 远超预算
+        var handler = new FakeHandler(["""{"choices":[{"message":{"content":"ok"}}]}"""]);
+        using var client = new AIChatClient(handler);
+        var settings = new AIChatSettings { BaseUrl = "https://x.test/v1", ApiKey = "k" };
+        var history = Enumerable.Range(0, 30)
+            .Select(i => ("user", big))
+            .Append(("assistant", big))
+            .ToList();
+
+        var reply = client.ChatAsync(settings, "你好", history).GetAwaiter().GetResult();
+
+        Assert.False(reply.IsError, reply.Error ?? "");
+        Assert.Equal("ok", reply.Content);
+        Assert.True(handler.RequestBodies.Count == 1, $"请求次数={handler.RequestBodies.Count}");
+        var sentBody = handler.RequestBodies[0];
+        // 断言解码后的内容长度（body 字符串含 \uXXXX 转义膨胀 ×6，服务端按解码后文本计 token）
+        using var doc = System.Text.Json.JsonDocument.Parse(sentBody);
+        var msgs = doc.RootElement.GetProperty("messages");
+        var decodedTotal = msgs.EnumerateArray()
+            .Sum(m => m.GetProperty("content").GetString()!.Length);
+        Assert.True(msgs.EnumerateArray().Count() <= 4, "body 消息数应 ≤ 4（裁剪后）");
+        Assert.True(decodedTotal < 1_000_000, $"解码后内容仍过大: {decodedTotal}");
+        Assert.Equal("你好", msgs.EnumerateArray().Last().GetProperty("content").GetString()); // 最新 user 保留
+        Assert.Contains("system", sentBody);    // system 保留
+    }
+
     private sealed class FakeHandler : HttpMessageHandler
     {
         private readonly Queue<Func<HttpResponseMessage>> _responses = new();

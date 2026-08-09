@@ -163,6 +163,9 @@ public sealed class ChatSessionService : IDisposable
                     .Select(m => (m.GetProperty("role").GetString() ?? "", m.GetProperty("content").GetString() ?? ""))
                     .Where(m => m.Item1.Length > 0 && m.Item2.Length > 0)
                     .ToList();
+                // 防御：旧版本文件可能超过上限，加载即裁剪
+                if (_history.Count > MaxHistory)
+                    _history.RemoveRange(0, _history.Count - MaxHistory);
             }
         }
         catch
