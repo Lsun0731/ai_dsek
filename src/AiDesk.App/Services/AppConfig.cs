@@ -34,7 +34,7 @@ public static class AppConfig
             // 主配置损坏时尝试从旧配置迁移
         }
 
-        // 迁移旧配置（首次从 config.json/dock.json 合并）
+        // 迁移旧配置（首次从 config.json 合并）
         return MigrateFromLegacy();
     }
 
