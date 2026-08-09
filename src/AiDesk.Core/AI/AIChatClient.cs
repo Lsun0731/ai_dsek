@@ -39,6 +39,9 @@ public sealed record AITool
     public required string Name { get; init; }
     public required string Description { get; init; }
     public required string ParametersJsonSchema { get; init; }
+
+    /// <summary>危险操作：执行前需用户确认。</summary>
+    public bool RequireConfirm { get; init; }
 }
 
 /// <summary>

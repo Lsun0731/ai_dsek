@@ -4,6 +4,7 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -18,10 +19,19 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <!-- UseWPF 会替换 SDK 默认隐式 using 集，显式补回基础命名空间 -->
+    <Using Include="System" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.IO" />
+    <Using Include="System.Linq" />
+    <Using Include="System.Net.Http" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AiDesk.Core\AiDesk.Core.csproj" />
+    <ProjectReference Include="..\..\src\AiDesk.App\AiDesk.App.csproj" />
   </ItemGroup>
 
 </Project>
