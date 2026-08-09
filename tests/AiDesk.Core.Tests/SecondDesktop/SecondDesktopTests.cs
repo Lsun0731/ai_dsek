@@ -31,17 +31,6 @@ public class RunningAppsProviderTests
     }
 }
 
-public class TaskbarHiderTests
-{
-    [Fact]
-    public void GetTaskbarHandle_能找到任务栏()
-    {
-        var hider = new TaskbarHider();
-        // 只读检查：任务栏窗口存在（当前会话有 explorer 外壳）
-        Assert.NotEqual(IntPtr.Zero, hider.GetTaskbarHandle());
-    }
-}
-
 public class DesktopIconHiderTests
 {
     [Fact]

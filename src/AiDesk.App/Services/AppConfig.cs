@@ -5,7 +5,7 @@ namespace AiDesk.App.Services;
 
 /// <summary>
 /// 应用统一配置持久化（%LOCALAPPDATA%\AiDesk\settings.json）。
-/// 首次启动自动迁移旧配置：config.json（小组件）+ dock.json（Dock）合并到 settings.json。
+/// 首次启动自动迁移旧配置（config.json 小组件）到 settings.json。
 /// </summary>
 public static class AppConfig
 {
