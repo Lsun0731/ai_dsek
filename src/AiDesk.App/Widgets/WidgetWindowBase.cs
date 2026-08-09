@@ -160,8 +160,11 @@ public abstract class WidgetWindowBase : Window
         // 重新加载磁盘最新配置：只更新本小组件的位置/开关，避免用构造时的旧快照覆写全局设置（透明度/城市）
         var settings = AppConfig.Load();
         var state = settings.GetState(_kind);
-        state.Left = Left;
-        state.Top = Top;
+        // NaN 防御：窗口未 Loaded 时 Left/Top 为 NaN，跳过落盘避免序列化异常吞掉整个保存
+        if (!double.IsNaN(Left))
+            state.Left = Left;
+        if (!double.IsNaN(Top))
+            state.Top = Top;
         if (PersistCloseState)
             state.IsOpen = false;
         AppConfig.Save(settings);

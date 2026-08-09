@@ -2,6 +2,7 @@ using AiDesk.App.Services;
 using AiDesk.App.Widgets;
 using AiDesk.Core.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Windows;
 
 namespace AiDesk.App.ViewModels;
 
@@ -45,23 +46,54 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _weatherCity = "北京";
 
+    /// <summary>启动时待恢复的打开状态（普通字段，避免直接引用 ObservableProperty 字段）。</summary>
+    private readonly Dictionary<WidgetKind, bool> _savedOpen = new();
+
     public WidgetViewModel()
     {
         var settings = AppConfig.Load();
-        WidgetOpacity = settings.Opacity;
-        WeatherCity = settings.WeatherCity;
-        StatsOpen = settings.GetState(WidgetKind.Stats).IsOpen;
-        DateOpen = settings.GetState(WidgetKind.Date).IsOpen;
-        WeatherOpen = settings.GetState(WidgetKind.Weather).IsOpen;
-        MusicOpen = settings.GetState(WidgetKind.Music).IsOpen;
-        SearchOpen = settings.GetState(WidgetKind.Search).IsOpen;
-        PetOpen = settings.GetState(WidgetKind.Pet).IsOpen;
+        // 字段直接赋值，避免构造函数触发 OnXxxChanged 无意义 Save / 提前打开窗口
+        _widgetOpacity = settings.Opacity;
+        _weatherCity = settings.WeatherCity;
+        _savedOpen[WidgetKind.Stats] = settings.GetState(WidgetKind.Stats).IsOpen;
+        _savedOpen[WidgetKind.Date] = settings.GetState(WidgetKind.Date).IsOpen;
+        _savedOpen[WidgetKind.Weather] = settings.GetState(WidgetKind.Weather).IsOpen;
+        _savedOpen[WidgetKind.Music] = settings.GetState(WidgetKind.Music).IsOpen;
+        _savedOpen[WidgetKind.Search] = settings.GetState(WidgetKind.Search).IsOpen;
+        _savedOpen[WidgetKind.Pet] = settings.GetState(WidgetKind.Pet).IsOpen;
 
         // AI 对话配置
         _aiBaseUrl = settings.AI.BaseUrl;
         _aiApiKey = settings.AI.ApiKey;
         _aiModel = settings.AI.Model;
+
+        // 启动恢复：窗口在 MainWindow 完成构造后统一打开（延迟到主窗口 Loaded，避免抢焦点）
+        Application.Current.Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Loaded, OpenSavedWindows);
     }
+
+    /// <summary>启动时恢复上次打开的窗口（主窗口显示后再开）。</summary>
+    private void OpenSavedWindows()
+    {
+        foreach (var (kind, open) in _savedOpen)
+        {
+            if (!open)
+                continue;
+            SetOpenFlagSilently(kind, true); // 同步开关状态，避免 UI 标志与窗口不一致
+            ToggleWidget(kind, true, FactoryFor(kind));
+        }
+    }
+
+    private static Func<WidgetWindowBase> FactoryFor(WidgetKind kind) => kind switch
+    {
+        WidgetKind.Stats => () => new StatsWidgetWindow(),
+        WidgetKind.Date => () => new DateWidgetWindow(),
+        WidgetKind.Weather => () => new WeatherWidgetWindow(),
+        WidgetKind.Music => () => new MusicWidgetWindow(),
+        WidgetKind.Search => () => new SearchWidgetWindow(),
+        WidgetKind.Pet => () => new PetWidgetWindow(),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
 
     partial void OnAiBaseUrlChanged(string value) => SaveAI();
     partial void OnAiApiKeyChanged(string value) => SaveAI();
@@ -124,7 +156,14 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
     {
         var window = factory();
         if (window is SearchWidgetWindow search)
-            search.AIRequested += () => ToggleWidget(WidgetKind.Pet, true, () => new PetWidgetWindow());
+        {
+            // 打开宠物需同步 PetOpen 标志（走正常属性路径），否则 UI 开关与字典不一致
+            search.AIRequested += () =>
+            {
+                if (!PetOpen)
+                    PetOpen = true;
+            };
+        }
         ToggleWidget(kind, open, factory, window);
     }
 
@@ -183,7 +222,11 @@ public partial class WidgetViewModel : ObservableObject, IDisposable
         if (open)
         {
             if (_windows.ContainsKey(kind))
+            {
+                // 防御：不变量被破坏时直接丢弃新构造的窗口（未 Show 无 HWND，GC 回收即可；
+                // 不能 Close——未订阅解绑会覆写磁盘 IsOpen 并误删在屏窗口记录）
                 return;
+            }
             var window = prepared ?? factory();
             window.Closed += (_, _) =>
             {

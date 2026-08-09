@@ -58,7 +58,7 @@ public partial class App : Application
             Telemetry.Info("App", "全局热键 Ctrl+Alt+V 注册失败（可能被占用）");
 
         _tray = new TrayIconService();
-        _tray.ShowSecondDesktopRequested += ToggleSearchWidget;
+        _tray.ShowSecondDesktopRequested += () => AppActions.OpenSearchPanel(); // 打开语义（非切换）
         _tray.ShowMainWindowRequested += ShowMainWindow;
         _tray.ExitRequested += () => Shutdown();
 
@@ -101,6 +101,7 @@ public partial class App : Application
     {
         _hotKey?.Dispose();
         _tray?.Dispose();
+        PetTtsService.Shutdown(); // 释放 SAPI 合成器与 MediaPlayer（取消在途朗读）
     }
 
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

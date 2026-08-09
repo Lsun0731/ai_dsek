@@ -27,9 +27,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     private readonly IReadOnlyList<StartMenuApp> _startMenuApps;
     private readonly Dictionary<string, ImageSource?> _iconCache = new();
     private readonly ClipboardMonitor _clipboard = new();
-    private readonly AIChatClient _ai = new();
-    private readonly List<(string Role, string Content)> _chatHistory = new();
-    private bool _chatBusy;
+    private readonly ChatSessionService _chat = new();
     private int _clipPage;
     private bool _clipExpanded = true;
 
@@ -299,34 +297,20 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     private async Task SendChatAsync()
     {
         var message = ChatInput.Text.Trim();
-        if (string.IsNullOrWhiteSpace(message) || _chatBusy)
+        if (string.IsNullOrWhiteSpace(message) || _chat.IsBusy)
             return;
 
-        _chatBusy = true;
         ChatInput.Clear();
         AddChatMessage("user", message);
-        _chatHistory.Add(("user", message));
 
-        var settings = AppConfig.Load().AI;
-        var reply = await _ai.ChatWithToolsAsync(settings, message, AgentTools.Tools, AgentTools.ExecuteAsync, _chatHistory);
-
-        _chatBusy = false;
-        if (reply.IsError)
+        await _chat.SendAsync(message, content =>
         {
-            AddChatMessage("assistant", reply.Error ?? "出错了");
-            Telemetry.Function("Search.Chat", false, 0, $"err={reply.Error}");
-        }
-        else
-        {
-            var content = reply.Content ?? "";
+            // 窗口可能已在请求期间关闭（_chat.Dispose 已执行），防止回写已释放控件
+            if (!IsLoaded)
+                return;
             AddChatMessage("assistant", content);
-            _chatHistory.Add(("assistant", content));
-            Telemetry.Function("Search.Chat", true, 0, $"len={content.Length}");
-        }
-
-        // 历史过长时裁剪（保留最近 20 条）
-        if (_chatHistory.Count > 20)
-            _chatHistory.RemoveRange(0, _chatHistory.Count - 20);
+            ChatScroll.ScrollToEnd();
+        }, "Search.Chat");
     }
 
     private void AddChatMessage(string role, string text)
@@ -346,7 +330,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     protected override void OnClosed(System.EventArgs e)
     {
         _clipboard.Dispose();
-        _ai.Dispose();
+        _chat.Dispose();
         base.OnClosed(e);
     }
 }

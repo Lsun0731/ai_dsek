@@ -9,18 +9,25 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = new MainViewModel();
-        Closing += OnClosing;
+        Closed += OnClosed;
     }
 
-    /// <summary>窗口关闭时释放可释放的 ViewModel（如壁纸轮播 Timer），避免后台残留。</summary>
-    private static void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    /// <summary>窗口关闭后释放可释放的 ViewModel（Closed 不可取消，避免半关闭状态）。</summary>
+    private static void OnClosed(object? sender, EventArgs e)
     {
         if (Application.Current.MainWindow?.DataContext is not MainViewModel vm)
             return;
         foreach (var item in vm.NavItems)
         {
-            if (item.ViewModel is IDisposable disposable)
-                disposable.Dispose();
+            try
+            {
+                if (item.ViewModel is IDisposable disposable)
+                    disposable.Dispose();
+            }
+            catch
+            {
+                // 单个释放失败不影响其余
+            }
         }
     }
 }

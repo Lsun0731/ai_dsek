@@ -8,7 +8,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using AiDesk.App.Services;
-using AiDesk.Core.AI;
 using AiDesk.Core.Diagnostics;
 using AiDesk.Core.Widgets;
 
@@ -32,11 +31,10 @@ public partial class PetWidgetWindow : WidgetWindowBase
         Dictate,   // 听写中
     }
 
-    private readonly AIChatClient _ai = new();
+    private readonly ChatSessionService _chat = new();
     private readonly List<ImageSource> _idleFrames = new();
     private readonly List<ImageSource> _walkFrames = new();
     private readonly Random _rnd = new();
-    private readonly List<(string Role, string Content)> _chatHistory = new();
     private readonly SystemStatsProvider _stats = new();
     private int _frameIndex;
     private PetState _state = PetState.Idle;
@@ -67,9 +65,6 @@ public partial class PetWidgetWindow : WidgetWindowBase
     // 拖动检测（按下后轮询位移，超过阈值转系统 DragMove —— 丝滑）
     private DispatcherTimer? _dragDetect;
     private bool _dragStarted;
-
-    /// <summary>Agent 工具（公共：启动应用 / 系统信息）。</summary>
-    private static IReadOnlyList<AITool> Tools => AgentTools.Tools;
 
     /// <summary>唤醒词候选（SAPI 中文引擎对英文发音的多种识别结果）。</summary>
     private static readonly string[] WakeWords = { "AD AD", "阿迪阿迪", "艾迪艾迪", "诶低诶低" };
@@ -230,7 +225,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
     /// <summary>启动唤醒词监听（常驻待命）。</summary>
     private void StartWakeListen()
     {
-        if (!_speechAvailable)
+        if (!_speechAvailable || !IsLoaded)
             return;
         _inConversation = false;
         _phase = SpeechPhase.Wake;
@@ -253,7 +248,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
     /// <summary>开始一次听写（说一句话，说完自动识别）。</summary>
     public void StartDictation()
     {
-        if (!_speechAvailable)
+        if (!_speechAvailable || !IsLoaded)
             return;
         _phase = SpeechPhase.Dictate;
         Dispatcher.Invoke(() =>
@@ -289,7 +284,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         if (_inConversation && ExitWords.Any(w => text.Contains(w, StringComparison.OrdinalIgnoreCase)))
         {
             _inConversation = false;
-            _chatHistory.Clear();
+            _chat.Clear();
             BubbleText.Text = "好的，需要时叫我～";
             await PetTtsService.SpeakAsync("好的，需要时叫我");
             StartWakeListen();
@@ -298,29 +293,21 @@ public partial class PetWidgetWindow : WidgetWindowBase
 
         _lastActivity = DateTime.Now;
         BubbleText.Text = "🧠 思考中…";
-        var settings = AppConfig.Load().AI;
-        _chatHistory.Add(("user", text));
-        if (_chatHistory.Count > 20)
-            _chatHistory.RemoveRange(0, _chatHistory.Count - 20);
 
-        var reply = await _ai.ChatWithToolsAsync(settings, text, Tools, AgentTools.ExecuteAsync, _chatHistory);
+        var content = await _chat.SendAsync(text, reply =>
+        {
+            // 窗口可能已关闭：防止回写已释放控件
+            if (!IsLoaded)
+                return;
+            BubbleText.Text = reply;
+        }, "Pet.Chat");
 
         if (!IsLoaded)
             return;
 
-        if (reply.IsError)
-        {
-            BubbleText.Text = reply.Error ?? "出错了";
-            Telemetry.Function("Pet.Chat", false, 0, $"err={reply.Error}");
-        }
-        else
-        {
-            var content = reply.Content ?? "";
-            BubbleText.Text = content;
-            _chatHistory.Add(("assistant", content));
-            await PetTtsService.SpeakAsync(content); // 语音朗读（edge 音色 / SAPI 回退）
-            Telemetry.Function("Pet.Chat", true, 0, $"len={content.Length}");
-        }
+        // 成功回复 → 语音朗读（错误文本已在回调中展示，不朗读）
+        if (content is not null)
+            await PetTtsService.SpeakAsync(content);
 
         // 对话窗口内：继续听下一条；否则回待命
         if (_inConversation)
@@ -332,10 +319,11 @@ public partial class PetWidgetWindow : WidgetWindowBase
     /// <summary>运行一次识别（引擎单次使用，完成后按阶段重启监听）。</summary>
     private void RunRecognition(Grammar grammar, Action<string> onResult)
     {
+        SpeechRecognitionEngine? engine = null;
         try
         {
             _currentEngine?.Dispose();
-            var engine = new SpeechRecognitionEngine(new CultureInfo("zh-CN"));
+            engine = new SpeechRecognitionEngine(new CultureInfo("zh-CN"));
             _currentEngine = engine;
             engine.LoadGrammar(grammar);
             engine.SetInputToDefaultAudioDevice();
@@ -350,11 +338,14 @@ public partial class PetWidgetWindow : WidgetWindowBase
         }
         catch (Exception ex)
         {
+            try { engine?.Dispose(); } catch { /* 忽略 */ }
             _speechAvailable = false;
             _phase = SpeechPhase.None;
             Telemetry.Error("Pet.Speech", ex);
             Dispatcher.Invoke(() =>
             {
+                if (!IsLoaded)
+                    return;
                 Bubble.Visibility = Visibility.Visible;
                 BubbleText.Text = $"语音不可用：{ex.Message}";
             });
@@ -368,6 +359,8 @@ public partial class PetWidgetWindow : WidgetWindowBase
             return;
         Dispatcher.Invoke(() =>
         {
+            if (!IsLoaded)
+                return; // 窗口已关闭：不再重启监听（防引擎泄漏）
             switch (_phase)
             {
                 case SpeechPhase.Wake:
@@ -378,7 +371,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
                     if (_inConversation && DateTime.Now - _lastActivity > TimeSpan.FromSeconds(ConversationTimeoutSec))
                     {
                         _inConversation = false;
-                        _chatHistory.Clear();
+                        _chat.Clear();
                         BubbleText.Text = "那我先待命啦，说 AD AD 找我～";
                         StartWakeListen();
                     }
@@ -492,7 +485,8 @@ public partial class PetWidgetWindow : WidgetWindowBase
         {
             // 释放语音资源失败不影响退出
         }
-        _ai.Dispose();
+        _stats.Dispose(); // PerformanceCounter 句柄必须释放（无终结器）
+        _chat.Dispose();
         base.OnClosed(e);
     }
 }

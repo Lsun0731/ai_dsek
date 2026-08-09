@@ -118,26 +118,45 @@ public static class CoreAudioVolume
     private static ComVolume? GetEndpointVolume()
     {
         var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
-        if (enumerator.GetDefaultAudioEndpoint(EDataFlowRender, ERoleMultimedia, out var device) != 0)
-            return null;
-        var iid = IID_IAudioEndpointVolume;
-        if (device.Activate(ref iid, CLSCTX_INPROC_SERVER, IntPtr.Zero, out var volume) != 0)
-            return null;
-        return new ComVolume(volume);
+        try
+        {
+            if (enumerator.GetDefaultAudioEndpoint(EDataFlowRender, ERoleMultimedia, out var device) != 0)
+                return null;
+            var iid = IID_IAudioEndpointVolume;
+            if (device.Activate(ref iid, CLSCTX_INPROC_SERVER, IntPtr.Zero, out var volume) != 0)
+            {
+                Marshal.ReleaseComObject(device);
+                return null;
+            }
+            return new ComVolume(volume, device);
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(enumerator);
+        }
     }
 
-    /// <summary>COM 包装：释放 RCW。</summary>
+    /// <summary>COM 包装：释放 IAudioEndpointVolume 与 IMMDevice 两个 RCW。</summary>
     private sealed class ComVolume : IDisposable
     {
         private readonly IAudioEndpointVolume _volume;
+        private readonly IMMDevice _device;
 
-        public ComVolume(IAudioEndpointVolume volume) => _volume = volume;
+        public ComVolume(IAudioEndpointVolume volume, IMMDevice device)
+        {
+            _volume = volume;
+            _device = device;
+        }
 
         public int GetMasterVolumeLevelScalar(out float level) => _volume.GetMasterVolumeLevelScalar(out level);
         public int SetMasterVolumeLevelScalar(float level, ref Guid ctx) => _volume.SetMasterVolumeLevelScalar(level, ref ctx);
         public int GetMute(out bool muted) => _volume.GetMute(out muted);
         public int SetMute(bool mute, ref Guid ctx) => _volume.SetMute(mute, ref ctx);
 
-        public void Dispose() => Marshal.ReleaseComObject(_volume);
+        public void Dispose()
+        {
+            Marshal.ReleaseComObject(_volume);
+            Marshal.ReleaseComObject(_device);
+        }
     }
 }

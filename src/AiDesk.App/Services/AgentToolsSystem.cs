@@ -15,8 +15,6 @@ namespace AiDesk.App.Services;
 /// </summary>
 public static partial class AgentTools
 {
-    private static readonly Lazy<SystemStatsProvider> Stats = new(() => new SystemStatsProvider());
-
     private static string Dispatch(string name, string argumentsJson) => name switch
     {
         "get_system_info" => GetSystemInfo(),
@@ -64,7 +62,9 @@ public static partial class AgentTools
 
     private static string GetSystemInfo()
     {
-        var stats = Stats.Value.Sample();
+        // 每次调用新建（PerformanceCounter 句柄用完即释放，避免静态常驻泄漏）
+        using var provider = new SystemStatsProvider();
+        var stats = provider.Sample();
         var os = Environment.OSVersion.VersionString;
         var cpu = $"{stats.CpuPercent:F0}%";
         var mem = $"{stats.MemPercent:F0}% 已用（{stats.MemUsedGb:F1}/{stats.MemTotalGb:F1} GB）";

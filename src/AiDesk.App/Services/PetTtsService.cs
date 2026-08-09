@@ -66,6 +66,19 @@ public static class PetTtsService
         var textFile = Path.Combine(tmpDir, $"input_{seq}.txt");
         var mediaFile = Path.Combine(tmpDir, $"tts_{Environment.ProcessId}_{seq}.mp3");
 
+        // 清理本进程早前的临时 mp3（MediaPlayer 已 Close 的旧文件可删；正在播放的被锁自动跳过）
+        try
+        {
+            foreach (var stale in Directory.EnumerateFiles(tmpDir, $"tts_{Environment.ProcessId}_*.mp3"))
+            {
+                try { File.Delete(stale); } catch { /* 播放中，跳过 */ }
+            }
+        }
+        catch
+        {
+            // 忽略清理失败
+        }
+
         try
         {
             // 文本写入文件避免命令行转义问题
@@ -84,6 +97,8 @@ public static class PetTtsService
             await process.WaitForExitAsync(cts.Token);
             if (process.ExitCode != 0 || !File.Exists(mediaFile))
             {
+                // 失败分支清理本次残留的 mp3（生成中被打断可能留下半文件）
+                try { if (File.Exists(mediaFile)) File.Delete(mediaFile); } catch { /* 忽略 */ }
                 Telemetry.Function("Pet.TtsEdge", false, 0, $"exit={process.ExitCode}");
                 return false;
             }
