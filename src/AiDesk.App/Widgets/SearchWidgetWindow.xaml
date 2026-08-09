@@ -7,6 +7,15 @@
     <widgets:WidgetWindowBase.Resources>
         <!-- ═══ Win11 Mica 风格（方角 4-8、米卡浅灰、系统蓝 #0067C0） ═══ -->
 
+        <!-- 浅色下拉框（覆盖 HC 深色主题默认样式：白底深字，避免浅色面板上文字不可见） -->
+        <Style x:Key="MicaComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#202124" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#14000000" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+
         <!-- Tab 按钮：选中 = 浅蓝底 + 蓝字 + SemiBold -->
         <Style x:Key="TabToggleStyle" TargetType="ToggleButton">
             <Setter Property="Background" Value="Transparent" />
@@ -383,6 +392,7 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="宠物音色" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
                         <ComboBox x:Name="VoiceBox" Margin="8,0,0,0" Width="230" Height="26" FontSize="11"
+                                  Style="{StaticResource MicaComboBoxStyle}"
                                   DisplayMemberPath="Name" SelectedValuePath="Id"
                                   SelectionChanged="OnVoiceChanged">
                             <ComboBox.GroupStyle>
@@ -409,12 +419,15 @@
                     <TextBlock Text="危险工具" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
                     <TextBlock Text="结束进程" FontSize="11" Foreground="#3C4043" VerticalAlignment="Center" Margin="12,0,0,0" />
                     <ComboBox x:Name="KillPermBox" Width="70" Height="24" FontSize="10.5" Margin="6,0,0,0"
+                              Style="{StaticResource MicaComboBoxStyle}"
                               SelectionChanged="OnPermChanged" Tag="kill_process" />
                     <TextBlock Text="清临时" FontSize="11" Foreground="#3C4043" VerticalAlignment="Center" Margin="12,0,0,0" />
                     <ComboBox x:Name="TempPermBox" Width="70" Height="24" FontSize="10.5" Margin="6,0,0,0"
+                              Style="{StaticResource MicaComboBoxStyle}"
                               SelectionChanged="OnPermChanged" Tag="clear_temp" />
                     <TextBlock Text="一键清理" FontSize="11" Foreground="#3C4043" VerticalAlignment="Center" Margin="12,0,0,0" />
                     <ComboBox x:Name="CleanPermBox" Width="70" Height="24" FontSize="10.5" Margin="6,0,0,0"
+                              Style="{StaticResource MicaComboBoxStyle}"
                               SelectionChanged="OnPermChanged" Tag="cleanup_computer" />
                 </StackPanel>
 
