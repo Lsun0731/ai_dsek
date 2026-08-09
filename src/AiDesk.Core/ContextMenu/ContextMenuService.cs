@@ -105,6 +105,35 @@ public sealed class ContextMenuService
         parent.DeleteSubKeyTree(item.RawKeyName, throwOnMissingSubKey: false);
     }
 
+    /// <summary>
+    /// 只读匹配推荐精简清单在当前系统中的命中项（按位置 + 键名精确匹配，跳过已禁用的）。
+    /// </summary>
+    public IReadOnlyList<(RecommendedDisableItem Definition, ContextMenuItem Item)> FindRecommended(
+        IReadOnlyList<RecommendedDisableItem> items)
+    {
+        var all = Enumerate();
+        var map = all
+            .Where(i => !i.IsDisabled)
+            .ToDictionary(i => (i.Location, i.RawKeyName), i => i);
+
+        var result = new List<(RecommendedDisableItem, ContextMenuItem)>();
+        foreach (var rec in items)
+        {
+            if (map.TryGetValue((rec.Location, rec.KeyName), out var item))
+                result.Add((rec, item));
+        }
+        return result;
+    }
+
+    /// <summary>按推荐清单批量禁用，返回实际禁用的数量（不存在的项自动跳过）。</summary>
+    public int DisableRecommended(IReadOnlyList<RecommendedDisableItem> items)
+    {
+        var matched = FindRecommended(items);
+        foreach (var (_, item) in matched)
+            SetEnabled(item, false);
+        return matched.Count;
+    }
+
     /// <summary>shell 命令读取：子键默认值优先，其次 command 子键的默认值。</summary>
     private static string? ReadShellCommand(RegistryKey subKey)
     {

@@ -25,6 +25,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <ComboBox ItemsSource="{Binding Locations}"
@@ -33,9 +34,12 @@
                       Width="200" Height="34" VerticalContentAlignment="Center" />
             <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}"
                     Style="{StaticResource ButtonPrimary}" Margin="10,0,0,0" Padding="20,0" />
-            <TextBlock Grid.Column="2" Text="{Binding StatusText}"
+            <Button Grid.Column="2" Content="推荐精简" Click="OnRecommendedClicked"
+                    Style="{StaticResource ButtonDefault}" Margin="10,0,0,0" Padding="20,0"
+                    ToolTip="一键禁用系统冗余右键菜单项（可逆）" />
+            <TextBlock Grid.Column="3" Text="{Binding StatusText}"
                        Margin="14,0,0,0" VerticalAlignment="Center"
-                       Foreground="#8A9099" FontSize="12" />
+                       Foreground="#8A9099" FontSize="12" TextTrimming="CharacterEllipsis" />
         </Grid>
 
         <!-- 列表 -->

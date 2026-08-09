@@ -30,7 +30,7 @@
             <DockPanel>
                 <!-- Logo -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,24,0,18">
-                    <Border Width="36" Height="36" CornerRadius="10" Background="{StaticResource PrimaryColor}">
+                    <Border Width="36" Height="36" CornerRadius="10" Background="#4C7CF3">
                         <TextBlock Text="A" Foreground="White" FontSize="20" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
@@ -62,7 +62,7 @@
                                                 <Setter TargetName="Bd" Property="Background" Value="#F1F3F8" />
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimaryColorLight}" />
+                                                <Setter TargetName="Bd" Property="Background" Value="#EAF0FE" />
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>

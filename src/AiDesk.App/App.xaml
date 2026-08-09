@@ -10,10 +10,9 @@
                 <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- 现代化主色：清爽蓝 -->
-            <SolidColorBrush x:Key="PrimaryColor" Color="#4C7CF3" />
-            <SolidColorBrush x:Key="PrimaryColorDark" Color="#3B66D0" />
-            <SolidColorBrush x:Key="PrimaryColorLight" Color="#EAF0FE" />
+            <!-- 现代化主色：清爽蓝（不覆盖 HandyControl 内部资源名，避免类型不匹配崩溃） -->
+            <Color x:Key="BrandColor" >#4C7CF3</Color>
+            <Color x:Key="BrandColorLight" >#EAF0FE</Color>
 
             <!-- 现代化开关（胶囊轨道 + 滑块） -->
             <Style x:Key="SwitchToggleButton" TargetType="ToggleButton">
@@ -30,7 +29,7 @@
                             </Grid>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="Track" Property="Background" Value="{StaticResource PrimaryColor}" />
+                                    <Setter TargetName="Track" Property="Background" Value="#4C7CF3" />
                                     <Setter TargetName="Thumb" Property="Margin" Value="21,0,0,0" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">

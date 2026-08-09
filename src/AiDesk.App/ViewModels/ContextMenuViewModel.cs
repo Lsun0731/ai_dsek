@@ -138,4 +138,21 @@ public partial class ContextMenuViewModel : ObservableObject
             return false;
         }
     }
+
+    /// <summary>匹配推荐精简清单（只读），返回界面展示用的命中项。</summary>
+    public IReadOnlyList<(string Name, string Description, string Location)> PrepareRecommended()
+    {
+        return _service.FindRecommended(RecommendedDisableList.All)
+            .Select(m => (m.Item.RawKeyName, m.Definition.Description, m.Item.LocationDisplay))
+            .ToList();
+    }
+
+    /// <summary>批量禁用推荐清单中的菜单项并刷新列表，返回实际禁用数量。</summary>
+    public int ApplyRecommended()
+    {
+        var count = _service.DisableRecommended(RecommendedDisableList.All);
+        Refresh();
+        StatusText = $"已禁用 {count} 个系统冗余菜单项（可随时重新启用）";
+        return count;
+    }
 }
