@@ -372,12 +372,23 @@
             <!-- ═══ 页面三：AI 对话（文字聊天 + Agent 工具） ═══ -->
             <Grid Grid.Row="2" x:Name="AIPage" Margin="0,4,0,0" Visibility="Collapsed">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
+                <!-- 音色设置行 -->
+                <Grid Margin="16,6,16,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="宠物音色" FontSize="11" Foreground="#5F6368" VerticalAlignment="Center" />
+                        <ComboBox x:Name="VoiceBox" Margin="8,0,0,0" Width="210" Height="26" FontSize="11"
+                                  DisplayMemberPath="Name" SelectedValuePath="Id"
+                                  SelectionChanged="OnVoiceChanged" />
+                    </StackPanel>
+                </Grid>
+
                 <!-- 聊天记录 -->
-                <ScrollViewer x:Name="ChatScroll" MaxHeight="320" VerticalScrollBarVisibility="Auto"
+                <ScrollViewer Grid.Row="1" x:Name="ChatScroll" MaxHeight="300" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled" Margin="8,6,8,0">
                     <ItemsControl x:Name="ChatList">
                         <ItemsControl.ItemTemplate>
@@ -402,7 +413,7 @@
                 </ScrollViewer>
 
                 <!-- 输入行 -->
-                <Grid Grid.Row="1" Margin="16,8,16,12">
+                <Grid Grid.Row="2" Margin="16,8,16,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />

@@ -19,7 +19,10 @@ public sealed class AIChatSettings
 
     /// <summary>系统提示词（宠物人格）。</summary>
     public string SystemPrompt { get; set; } =
-        "你是一个活泼可爱的桌面宠物 AI 助手，回答简短友好，语气俏皮。你可以使用工具帮用户处理电脑问题（启动应用、查询系统信息）。";
+        "你是一个友好的桌面宠物 AI 助手。回复使用纯文字，简洁友好，不使用任何表情符号、emoji、颜文字或图标。你可以使用工具帮用户处理电脑问题（启动应用、查询系统信息）。";
+
+    /// <summary>TTS 音色（edge:音色名 或 sapi:zh-CN，见 PetTtsService.Voices）。</summary>
+    public string Voice { get; set; } = "edge:zh-CN-XiaoxiaoNeural";
 }
 
 /// <summary>AI 对话回复。</summary>

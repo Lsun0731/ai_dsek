@@ -41,6 +41,8 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         InitializeComponent();
         _startMenuApps = StartMenuAppsProvider.Scan();
         RefreshClipboard();
+        VoiceBox.ItemsSource = PetTtsService.Voices;
+        VoiceBox.SelectedValue = AppConfig.Load().AI.Voice;
         StartTickerMs(1000); // 剪贴板历史每秒刷新
 
         // 失焦自动隐藏（点击面板外任意处即关闭，类似 Spotlight）
@@ -97,6 +99,18 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     }
 
     private void OnAITabClick(object sender, RoutedEventArgs e) => SetTab();
+
+    // ---- 宠物音色设置 ----
+
+    private void OnVoiceChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (VoiceBox.SelectedValue is not string voice || voice.Length == 0)
+            return;
+        var settings = AppConfig.Load();
+        settings.AI.Voice = voice;
+        AppConfig.Save(settings);
+        Telemetry.Event("Search", $"切换音色 {voice}");
+    }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 

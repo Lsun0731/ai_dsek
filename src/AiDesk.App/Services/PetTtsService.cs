@@ -1,0 +1,154 @@
+using System.Diagnostics;
+using System.IO;
+using System.Speech.Synthesis;
+using System.Windows.Media;
+using AiDesk.Core.Diagnostics;
+
+namespace AiDesk.App.Services;
+
+/// <summary>
+/// 语音朗读服务：优先 edge-tts（微软 Edge 同款免费神经网络语音，多中文音色），
+/// 不可用时回退 SAPI 系统语音。音色通过 AppConfig.AI.Voice 配置。
+/// </summary>
+public static class PetTtsService
+{
+    /// <summary>可选音色列表（Id 写入配置）。</summary>
+    public static readonly (string Id, string Name)[] Voices =
+    {
+        ("edge:zh-CN-XiaoxiaoNeural", "晓晓 · 女声 自然"),
+        ("edge:zh-CN-XiaoyiNeural", "晓伊 · 女声 年轻"),
+        ("edge:zh-CN-YunxiNeural", "云希 · 男声 阳光"),
+        ("edge:zh-CN-YunjianNeural", "云健 · 男声 浑厚"),
+        ("edge:zh-CN-YunyangNeural", "云扬 · 男声 播音"),
+        ("edge:zh-CN-liaoning-XiaobeiNeural", "晓北 · 女声 东北"),
+        ("edge:zh-CN-shaanxi-XiaoniNeural", "晓妮 · 女声 陕西"),
+        ("sapi:zh-CN", "系统语音 · 离线"),
+    };
+
+    private static MediaPlayer? _player;
+    private static SpeechSynthesizer? _synth;
+    private static int _speakSeq;
+
+    /// <summary>朗读文本（异步）。连续调用时取消上一次。</summary>
+    public static async Task SpeakAsync(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        var voice = AppConfig.Load().AI.Voice;
+        if (voice.StartsWith("edge:"))
+        {
+            if (await TrySpeakEdgeAsync(text, voice))
+                return;
+            // edge 不可用（无 python/断网/失败）→ 回退系统语音
+        }
+        SpeakSapi(text);
+    }
+
+    /// <summary>edge-tts 生成并播放；成功返回 true。</summary>
+    private static async Task<bool> TrySpeakEdgeAsync(string text, string voiceId)
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), "AiDeskTts");
+        Directory.CreateDirectory(tmpDir);
+        var textFile = Path.Combine(tmpDir, "input.txt");
+        var mediaFile = Path.Combine(tmpDir, $"tts_{Environment.ProcessId}_{Interlocked.Increment(ref _speakSeq)}.mp3");
+
+        try
+        {
+            // 文本写入文件避免命令行转义问题
+            await File.WriteAllTextAsync(textFile, text);
+            var psi = new ProcessStartInfo("python",
+                $"-m edge_tts --voice {voiceId} --file \"{textFile}\" --write-media \"{mediaFile}\"")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+            };
+            using var process = Process.Start(psi);
+            if (process is null)
+                return false;
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            await process.WaitForExitAsync(cts.Token);
+            if (process.ExitCode != 0 || !File.Exists(mediaFile))
+            {
+                Telemetry.Function("Pet.TtsEdge", false, 0, $"exit={process.ExitCode}");
+                return false;
+            }
+
+            // 播放（停止上一次）
+            _player?.Close();
+            _player = new MediaPlayer();
+            _player.Open(new Uri(mediaFile));
+            _player.Play();
+            Telemetry.Function("Pet.TtsEdge", true, 0, $"voice={voiceId} len={text.Length}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Pet.TtsEdge", ex);
+            return false;
+        }
+        finally
+        {
+            // 播放中删除文件会失败，留到下次生成时覆盖/系统清理
+            try
+            {
+                if (File.Exists(textFile))
+                    File.Delete(textFile);
+            }
+            catch
+            {
+                // 忽略
+            }
+        }
+    }
+
+    /// <summary>SAPI 系统语音（离线兜底，中文优先）。</summary>
+    private static void SpeakSapi(string text)
+    {
+        try
+        {
+            _synth ??= CreateChineseSynth();
+            _synth.SpeakAsyncCancelAll();
+            _synth.SpeakAsync(text);
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Pet.TtsSapi", ex);
+        }
+    }
+
+    private static SpeechSynthesizer CreateChineseSynth()
+    {
+        var synth = new SpeechSynthesizer();
+        try
+        {
+            var zh = synth.GetInstalledVoices()
+                .FirstOrDefault(v => v.VoiceInfo.Culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
+            if (zh is not null)
+                synth.SelectVoice(zh.VoiceInfo.Name);
+        }
+        catch
+        {
+            // 无中文语音则用默认
+        }
+        return synth;
+    }
+
+    /// <summary>释放资源（应用退出时调用）。</summary>
+    public static void Shutdown()
+    {
+        try
+        {
+            _player?.Close();
+            _player = null;
+            _synth?.SpeakAsyncCancelAll();
+            _synth?.Dispose();
+            _synth = null;
+        }
+        catch
+        {
+            // 忽略
+        }
+    }
+}

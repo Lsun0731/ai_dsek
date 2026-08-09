@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Speech.Recognition;
-using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
@@ -42,10 +41,9 @@ public partial class PetWidgetWindow : WidgetWindowBase
     private double _targetX, _targetY; // 随机目标点（自由移动）
     private DateTime _nextIdleEnd = DateTime.MinValue;
 
-    // 语音对话（SAPI：唤醒词监听 + 听写 + TTS 朗读）
+    // 语音对话（SAPI 唤醒词监听 + 听写；TTS 朗读走 PetTtsService）
     private volatile SpeechPhase _phase = SpeechPhase.None;
     private SpeechRecognitionEngine? _currentEngine;
-    private SpeechSynthesizer? _synth;
     private bool _speechAvailable = true;
 
     // 拖动检测（按下后轮询位移，超过阈值转系统 DragMove —— 丝滑）
@@ -277,7 +275,7 @@ public partial class PetWidgetWindow : WidgetWindowBase
         {
             var content = reply.Content ?? "";
             BubbleText.Text = content;
-            Speak(content); // 优先语音朗读回复
+            await PetTtsService.SpeakAsync(content); // 语音朗读（edge 音色 / SAPI 回退）
             Telemetry.Function("Pet.Chat", true, 0, $"len={content.Length}");
         }
 
@@ -336,40 +334,6 @@ public partial class PetWidgetWindow : WidgetWindowBase
         });
     }
 
-    /// <summary>TTS 朗读回复（优先中文语音）。</summary>
-    private void Speak(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return;
-        try
-        {
-            _synth ??= CreateChineseSynth();
-            _synth.SpeakAsyncCancelAll();
-            _synth.SpeakAsync(text);
-        }
-        catch (Exception ex)
-        {
-            Telemetry.Error("Pet.Tts", ex);
-        }
-    }
-
-    private static SpeechSynthesizer CreateChineseSynth()
-    {
-        var synth = new SpeechSynthesizer();
-        try
-        {
-            var zh = synth.GetInstalledVoices()
-                .FirstOrDefault(v => v.VoiceInfo.Culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
-            if (zh is not null)
-                synth.SelectVoice(zh.VoiceInfo.Name);
-        }
-        catch
-        {
-            // 无中文语音则用默认
-        }
-        return synth;
-    }
-
     // ---- 拖动（丝滑：位移检测 → 系统 DragMove） ----
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -416,8 +380,6 @@ public partial class PetWidgetWindow : WidgetWindowBase
             _phase = SpeechPhase.None;
             _currentEngine?.RecognizeAsyncCancel();
             _currentEngine?.Dispose();
-            _synth?.SpeakAsyncCancelAll();
-            _synth?.Dispose();
         }
         catch
         {
