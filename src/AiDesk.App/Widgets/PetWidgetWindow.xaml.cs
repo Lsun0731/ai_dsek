@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Speech.Recognition;
+using System.Speech.Synthesis;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
@@ -10,68 +11,63 @@ using System.Windows.Threading;
 using AiDesk.App.Services;
 using AiDesk.Core.AI;
 using AiDesk.Core.Diagnostics;
-using AiDesk.Core.Widgets;
 
 namespace AiDesk.App.Widgets;
 
 /// <summary>
-/// 桌面宠物：VPet 动漫角色（待机/走路动画），可拖动，可自由走动（上下左右随机），
-/// 点击呼出输入框：文字 / 语音（Windows 听写）→ AI Agent（可启动应用、查询系统信息）→ 头顶气泡回复。
+/// 桌面宠物：VPet 动漫角色（待机/走路动画），可拖动，可自由走动（上下左右随机）。
+/// 纯语音对话：常驻监听唤醒词「AD AD」→ 提示听写 → AI Agent（启动应用/系统信息）→ 气泡文字 + TTS 朗读回复。
+/// 点击宠物 = 直接开始一次听写。文字聊天已移至搜索面板的「AI 对话」Tab。
 /// 动画素材来源：VPet 开源桌宠（https://github.com/LorisYounger/VPet），非商用免费。
 /// </summary>
 public partial class PetWidgetWindow : WidgetWindowBase
 {
     private enum PetState { Idle, Walking }
 
+    /// <summary>语音对话阶段。</summary>
+    private enum SpeechPhase : int
+    {
+        None,      // 空闲/处理中（不监听）
+        Wake,      // 监听唤醒词 AD AD
+        Dictate,   // 听写中
+    }
+
     private readonly AIChatClient _ai = new();
     private readonly List<ImageSource> _idleFrames = new();
     private readonly List<ImageSource> _walkFrames = new();
     private readonly Random _rnd = new();
-    private readonly SystemStatsProvider _stats = new();
     private int _frameIndex;
     private PetState _state = PetState.Idle;
     private int _walkDir = 1;          // 1 向右 / -1 向左（动画朝向）
     private double _targetX, _targetY; // 随机目标点（自由移动）
     private DateTime _nextIdleEnd = DateTime.MinValue;
-    private bool _chatMode;
-    private bool _thinking;
 
-    // 语音识别（SAPI 系统语音引擎，免费离线中文；WinRT 在本机不可用时回退）
-    private SpeechRecognitionEngine? _engine;
-    private volatile bool _listening;
+    // 语音对话（SAPI：唤醒词监听 + 听写 + TTS 朗读）
+    private volatile SpeechPhase _phase = SpeechPhase.None;
+    private SpeechRecognitionEngine? _currentEngine;
+    private SpeechSynthesizer? _synth;
+    private bool _speechAvailable = true;
 
     // 拖动检测（按下后轮询位移，超过阈值转系统 DragMove —— 丝滑）
     private DispatcherTimer? _dragDetect;
     private bool _dragStarted;
 
-    /// <summary>Agent 工具列表（启动应用 / 系统信息）。</summary>
-    private static readonly AITool[] Tools =
-    {
-        new()
-        {
-            Name = "launch_app",
-            Description = "启动一个已安装的应用程序（按名称匹配，如：记事本、计算器、Chrome、设置）。",
-            ParametersJsonSchema = """
-                {"type":"object","properties":{"name":{"type":"string","description":"应用名称关键词"}},"required":["name"]}
-                """,
-        },
-        new()
-        {
-            Name = "get_system_info",
-            Description = "查询电脑系统信息：操作系统版本、CPU 使用率、内存、磁盘占用。",
-            ParametersJsonSchema = """{"type":"object","properties":{}}""",
-        },
-    };
+    /// <summary>Agent 工具（公共：启动应用 / 系统信息）。</summary>
+    private static IReadOnlyList<AITool> Tools => AgentTools.Tools;
+
+    /// <summary>唤醒词候选（SAPI 中文引擎对英文发音的多种识别结果）。</summary>
+    private static readonly string[] WakeWords = { "AD AD", "阿迪阿迪", "艾迪艾迪", "诶低诶低" };
 
     public PetWidgetWindow() : base(Services.WidgetKind.Pet, topmost: true)
     {
         InitializeComponent();
         LoadFrames();
         StartTickerMs(125); // 帧时长 125ms
-        ShowGreeting();
+
+        Loaded += (_, _) => StartWakeListen();
     }
 
-    /// <summary>宠物禁用基类 DragMove（点击=聊天，拖动用位移检测后手动调用 DragMove）。</summary>
+    /// <summary>宠物禁用基类 DragMove（点击=听写，拖动用位移检测后手动调用 DragMove）。</summary>
     protected override bool ShouldDrag(System.Windows.Input.MouseButtonEventArgs e) => false;
 
     private void LoadFrames()
@@ -140,7 +136,6 @@ public partial class PetWidgetWindow : WidgetWindowBase
         var maxX = work.Right - ActualWidth;
         var maxY = work.Bottom - ActualHeight;
 
-        // 到达目标 → 待机
         if (Math.Abs(Left - _targetX) < step && Math.Abs(Top - _targetY) < step)
         {
             _state = PetState.Idle;
@@ -148,7 +143,6 @@ public partial class PetWidgetWindow : WidgetWindowBase
             return;
         }
 
-        // 计算朝向目标的方向向量
         var dx = _targetX - Left;
         var dy = _targetY - Top;
         var len = Math.Sqrt(dx * dx + dy * dy);
@@ -159,7 +153,6 @@ public partial class PetWidgetWindow : WidgetWindowBase
             return;
         }
 
-        // 水平朝向（决定动画翻转）
         if (Math.Abs(dx) > 1)
         {
             var newDir = dx > 0 ? 1 : -1;
@@ -167,11 +160,9 @@ public partial class PetWidgetWindow : WidgetWindowBase
                 FlipDirection(newDir);
         }
 
-        // 移动
         Left += dx / len * step;
         Top += dy / len * step;
 
-        // 碰壁：重新选目标让角色折返
         var hitX = Left <= minX || Left >= maxX;
         var hitY = Top <= minY || Top >= maxY;
         if (hitX || hitY)
@@ -216,10 +207,167 @@ public partial class PetWidgetWindow : WidgetWindowBase
         _nextIdleEnd = DateTime.Now.AddSeconds(_rnd.Next(8, 18));
     }
 
-    private void ShowGreeting()
+    // ---- 语音对话状态机（唤醒词 AD AD → 听写 → AI → TTS 回复 → 回监听） ----
+
+    /// <summary>启动唤醒词监听（常驻待命）。</summary>
+    private void StartWakeListen()
     {
-        Bubble.Visibility = Visibility.Visible;
-        BubbleText.Text = "你好呀！点我聊天～";
+        if (!_speechAvailable)
+            return;
+        _phase = SpeechPhase.Wake;
+        var grammar = new Grammar(new Choices(WakeWords));
+        RunRecognition(grammar, text =>
+        {
+            _phase = SpeechPhase.None; // 命中唤醒：暂停监听，走听写
+            Dispatcher.Invoke(() =>
+            {
+                Bubble.Visibility = Visibility.Visible;
+                BubbleText.Text = "👂 我在，请说…";
+                try { System.Media.SystemSounds.Asterisk.Play(); } catch { /* 提示音可选 */ }
+            });
+            StartDictation();
+        });
+    }
+
+    /// <summary>开始一次听写（说一句话，说完自动识别）。</summary>
+    public void StartDictation()
+    {
+        if (!_speechAvailable)
+            return;
+        _phase = SpeechPhase.Dictate;
+        Dispatcher.Invoke(() =>
+        {
+            Bubble.Visibility = Visibility.Visible;
+            BubbleText.Text = "🎤 听写中…（说完自动发送）";
+        });
+        var grammar = new DictationGrammar();
+        RunRecognition(grammar, text =>
+        {
+            _phase = SpeechPhase.None; // 已拿到结果：暂停监听
+            Dispatcher.InvokeAsync(async () => await HandleDictationAsync(text));
+        });
+    }
+
+    /// <summary>听写结果 → AI Agent → 气泡文字 + TTS 朗读 → 回到唤醒监听。</summary>
+    private async Task HandleDictationAsync(string text)
+    {
+        if (!IsLoaded)
+            return;
+        text = text?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            BubbleText.Text = "没听清，再说一次？";
+            StartWakeListen();
+            return;
+        }
+
+        BubbleText.Text = "🧠 思考中…";
+        var settings = AppConfig.Load().AI;
+        var reply = await _ai.ChatWithToolsAsync(settings, text, Tools, AgentTools.Execute);
+
+        if (!IsLoaded)
+            return;
+
+        if (reply.IsError)
+        {
+            BubbleText.Text = reply.Error ?? "出错了";
+            Telemetry.Function("Pet.Chat", false, 0, $"err={reply.Error}");
+        }
+        else
+        {
+            var content = reply.Content ?? "";
+            BubbleText.Text = content;
+            Speak(content); // 优先语音朗读回复
+            Telemetry.Function("Pet.Chat", true, 0, $"len={content.Length}");
+        }
+
+        // 回复完回到待命监听
+        StartWakeListen();
+    }
+
+    /// <summary>运行一次识别（引擎单次使用，完成后按阶段重启监听）。</summary>
+    private void RunRecognition(Grammar grammar, Action<string> onResult)
+    {
+        try
+        {
+            _currentEngine?.Dispose();
+            var engine = new SpeechRecognitionEngine(new CultureInfo("zh-CN"));
+            _currentEngine = engine;
+            engine.LoadGrammar(grammar);
+            engine.SetInputToDefaultAudioDevice();
+            engine.SpeechRecognized += (_, e) =>
+            {
+                var text = e.Result?.Text ?? "";
+                if (!string.IsNullOrWhiteSpace(text))
+                    onResult(text);
+            };
+            engine.RecognizeCompleted += OnRecognizeCompleted;
+            engine.RecognizeAsync(RecognizeMode.Single);
+        }
+        catch (Exception ex)
+        {
+            _speechAvailable = false;
+            _phase = SpeechPhase.None;
+            Telemetry.Error("Pet.Speech", ex);
+            Dispatcher.Invoke(() =>
+            {
+                Bubble.Visibility = Visibility.Visible;
+                BubbleText.Text = $"语音不可用：{ex.Message}";
+            });
+        }
+    }
+
+    /// <summary>识别结束（超时/无结果/取消）：若阶段未变则继续监听，否则不重启。</summary>
+    private void OnRecognizeCompleted(object? sender, RecognizeCompletedEventArgs e)
+    {
+        if (e.Cancelled)
+            return;
+        Dispatcher.Invoke(() =>
+        {
+            switch (_phase)
+            {
+                case SpeechPhase.Wake:
+                    StartWakeListen();
+                    break;
+                case SpeechPhase.Dictate:
+                    StartDictation(); // 没听到有效内容 → 重新听
+                    break;
+            }
+        });
+    }
+
+    /// <summary>TTS 朗读回复（优先中文语音）。</summary>
+    private void Speak(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+        try
+        {
+            _synth ??= CreateChineseSynth();
+            _synth.SpeakAsyncCancelAll();
+            _synth.SpeakAsync(text);
+        }
+        catch (Exception ex)
+        {
+            Telemetry.Error("Pet.Tts", ex);
+        }
+    }
+
+    private static SpeechSynthesizer CreateChineseSynth()
+    {
+        var synth = new SpeechSynthesizer();
+        try
+        {
+            var zh = synth.GetInstalledVoices()
+                .FirstOrDefault(v => v.VoiceInfo.Culture.Name.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
+            if (zh is not null)
+                synth.SelectVoice(zh.VoiceInfo.Name);
+        }
+        catch
+        {
+            // 无中文语音则用默认
+        }
+        return synth;
     }
 
     // ---- 拖动（丝滑：位移检测 → 系统 DragMove） ----
@@ -254,215 +402,27 @@ public partial class PetWidgetWindow : WidgetWindowBase
     {
         _dragDetect?.Stop();
         if (!_dragStarted)
-            ToggleChat();
+            StartDictation(); // 点击宠物 = 直接开始听写（等效唤醒词）
         base.OnMouseLeftButtonUp(e);
     }
 
-    private void ToggleChat()
-    {
-        if (_thinking)
-            return;
-        _chatMode = !_chatMode;
-        InputPanel.Visibility = _chatMode ? Visibility.Visible : Visibility.Collapsed;
-        BubbleText.Visibility = _chatMode ? Visibility.Collapsed : Visibility.Visible;
-        Bubble.Visibility = Visibility.Visible;
-        if (_chatMode)
-            InputBox.Focus();
-        else
-            ShowGreeting();
-    }
-
-    // ---- 语音输入（SAPI 系统听写：点开始 → 说完自动识别 → 发送） ----
-
-    private async void OnMicClicked(object sender, RoutedEventArgs e)
-    {
-        if (_listening)
-        {
-            // 停止并取消本次听写
-            _engine?.RecognizeAsyncCancel();
-            return;
-        }
-        await StartListeningAsync();
-    }
-
-    private Task StartListeningAsync()
-    {
-        // 进入即置位，防止快速双击并发启动
-        _listening = true;
-        return Task.Run(() =>
-        {
-            try
-            {
-                using var engine = new SpeechRecognitionEngine(new CultureInfo("zh-CN"));
-                _engine = engine;
-                engine.LoadGrammar(new DictationGrammar());
-                engine.SetInputToDefaultAudioDevice();
-                engine.SpeechRecognized += OnSpeechRecognized;
-                engine.RecognizeCompleted += OnRecognizeCompleted;
-                Dispatcher.Invoke(() =>
-                {
-                    BubbleText.Text = "🎤 听写中…（说完自动识别）";
-                    BubbleText.Visibility = Visibility.Visible;
-                });
-                // 单次识别：录音直到说完停顿，自动结束
-                engine.RecognizeAsync(RecognizeMode.Single);
-            }
-            catch (Exception ex)
-            {
-                _listening = false;
-                Dispatcher.Invoke(() => BubbleText.Text = $"语音不可用：{ex.Message}");
-                Telemetry.Error("Pet.Speech", ex);
-            }
-        });
-    }
-
-    private void OnSpeechRecognized(object? sender, SpeechRecognizedEventArgs e)
-    {
-        var text = e.Result?.Text ?? "";
-        Dispatcher.Invoke(() =>
-        {
-            InputBox.Text = text;
-            if (string.IsNullOrWhiteSpace(text))
-                BubbleText.Text = "没听清，再说一次？";
-            else
-                BubbleText.Text = $"听写：{text}";
-        });
-    }
-
-    private void OnRecognizeCompleted(object? sender, RecognizeCompletedEventArgs e)
-    {
-        _listening = false;
-        if (e.Cancelled || e.Error is not null)
-        {
-            if (e.Error is not null)
-                Dispatcher.Invoke(() => BubbleText.Text = $"语音错误：{e.Error.Message}");
-            return;
-        }
-
-        // 识别完成自动发送
-        var text = InputBox.Text.Trim();
-        if (!string.IsNullOrEmpty(text))
-            Dispatcher.InvokeAsync(async () => await SendAsync());
-    }
-
-    // ---- AI Agent（工具调用：启动应用 / 系统信息） ----
-
-    private void OnInputKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter)
-            _ = SendAsync();
-    }
-
-    private async void OnSendClicked(object sender, RoutedEventArgs e) => await SendAsync();
-
-    private async Task SendAsync()
-    {
-        var message = InputBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(message) || _thinking)
-            return;
-
-        var settings = AppConfig.Load().AI;
-        _thinking = true;
-        _chatMode = false;
-        InputPanel.Visibility = Visibility.Collapsed;
-        BubbleText.Visibility = Visibility.Visible;
-        BubbleText.Text = "思考中…";
-
-        var reply = await _ai.ChatWithToolsAsync(settings, message, Tools, ExecuteTool);
-
-        // await 期间窗口可能已关闭
-        if (!IsLoaded)
-            return;
-
-        _thinking = false;
-
-        if (reply.IsError)
-        {
-            BubbleText.Text = reply.Error ?? "出错了";
-            Telemetry.Function("Pet.Chat", false, 0, $"err={reply.Error}");
-        }
-        else
-        {
-            BubbleText.Text = reply.Content ?? "";
-            Telemetry.Function("Pet.Chat", true, 0, $"len={reply.Content?.Length}");
-        }
-    }
-
-    /// <summary>执行模型请求的工具调用，返回工具结果文本。</summary>
-    private string ExecuteTool(string name, string argumentsJson)
-    {
-        try
-        {
-            switch (name)
-            {
-                case "launch_app":
-                    return ExecuteLaunchApp(argumentsJson);
-                case "get_system_info":
-                    return GetSystemInfo();
-                default:
-                    return $"未知工具: {name}";
-            }
-        }
-        catch (Exception ex)
-        {
-            return $"工具执行失败: {ex.Message}";
-        }
-    }
-
-    private string ExecuteLaunchApp(string argumentsJson)
-    {
-        string keyword;
-        try
-        {
-            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson);
-            keyword = doc.RootElement.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
-        }
-        catch
-        {
-            keyword = "";
-        }
-        if (string.IsNullOrWhiteSpace(keyword))
-            return "缺少应用名称参数";
-
-        var app = AppsCache.Value
-            .FirstOrDefault(a => a.Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase));
-        if (app is null)
-            return $"未找到应用「{keyword}」。可用名称如：记事本、计算器、设置、画图、截图工具。";
-
-        Process.Start(new ProcessStartInfo(app.LnkPath) { UseShellExecute = true });
-        return $"已启动应用「{app.Name}」";
-    }
-
-    /// <summary>开始菜单应用缓存（Agent 工具多次调用避免重复全量扫描）。</summary>
-    private static readonly Lazy<IReadOnlyList<StartMenuApp>> AppsCache =
-        new(() => StartMenuAppsProvider.Scan());
-
-    private string GetSystemInfo()
-    {
-        var stats = _stats.Sample();
-        var os = Environment.OSVersion.VersionString;
-        var cpu = $"{stats.CpuPercent:F0}%";
-        var mem = $"{stats.MemPercent:F0}% 已用（{stats.MemUsedGb:F1}/{stats.MemTotalGb:F1} GB）";
-        var disks = string.Join("；", stats.Disks.Select(d => $"{d.Name} {d.Percent:F0}% 已用"));
-        return $"操作系统: {os}；CPU 使用率: {cpu}；内存: {mem}；磁盘: {disks}";
-    }
+    // ---- Agent 工具执行（公共 AgentTools） ----
 
     protected override void OnClosed(System.EventArgs e)
     {
         _dragDetect?.Stop();
         try
         {
-            if (_engine is not null)
-            {
-                _engine.RecognizeAsyncCancel();
-                _engine.Dispose();
-            }
+            _phase = SpeechPhase.None;
+            _currentEngine?.RecognizeAsyncCancel();
+            _currentEngine?.Dispose();
+            _synth?.SpeakAsyncCancelAll();
+            _synth?.Dispose();
         }
         catch
         {
-            // 释放语音引擎失败不影响退出
+            // 释放语音资源失败不影响退出
         }
-        _stats.Dispose();
         _ai.Dispose();
         base.OnClosed(e);
     }

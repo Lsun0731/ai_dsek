@@ -194,6 +194,8 @@
                                   IsChecked="True" Click="OnSearchTabClick" />
                     <ToggleButton x:Name="ClipTabBtn" Content="📋 剪贴板" Style="{StaticResource TabToggleStyle}"
                                   Margin="4,0,0,0" Click="OnClipTabClick" />
+                    <ToggleButton x:Name="AITabBtn" Content="🤖 AI 对话" Style="{StaticResource TabToggleStyle}"
+                                  Margin="4,0,0,0" Click="OnAITabClick" />
                 </StackPanel>
                 <Button Content="✕" Grid.Column="1" HorizontalAlignment="Right"
                         Style="{StaticResource PageNavStyle}" Click="OnCloseClick" />
@@ -365,6 +367,52 @@
                     <TextBlock Grid.Column="1" Text="点击条目复制 · Esc 关闭"
                                FontSize="10" Foreground="#9AA0A6" VerticalAlignment="Center"
                                HorizontalAlignment="Right" Margin="12,0,4,0" />
+                </Grid>
+            </Grid>
+            <!-- ═══ 页面三：AI 对话（文字聊天 + Agent 工具） ═══ -->
+            <Grid Grid.Row="2" x:Name="AIPage" Margin="0,4,0,0" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 聊天记录 -->
+                <ScrollViewer x:Name="ChatScroll" MaxHeight="320" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled" Margin="8,6,8,0">
+                    <ItemsControl x:Name="ChatList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="10,3">
+                                    <Border x:Name="bubble" MaxWidth="400" CornerRadius="8" Padding="10,8"
+                                            HorizontalAlignment="Left" Background="#FFF1F3F4">
+                                        <TextBlock x:Name="txt" Text="{Binding Text}" TextWrapping="Wrap"
+                                                   FontSize="12" Foreground="#202124" />
+                                    </Border>
+                                </Grid>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Role}" Value="user">
+                                        <Setter TargetName="bubble" Property="HorizontalAlignment" Value="Right" />
+                                        <Setter TargetName="bubble" Property="Background" Value="#0067C0" />
+                                        <Setter TargetName="txt" Property="Foreground" Value="White" />
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- 输入行 -->
+                <Grid Grid.Row="1" Margin="16,8,16,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="ChatInput" FontSize="12.5" Padding="10,7" Background="#FFFFFFFF"
+                             BorderBrush="#14000000" BorderThickness="1" Foreground="#202124"
+                             VerticalContentAlignment="Center" KeyDown="OnChatKeyDown" />
+                    <Button Grid.Column="1" Content="发送" Margin="8,0,0,0" Background="#0067C0"
+                            Foreground="White" BorderThickness="0" Padding="14,7" FontSize="11.5"
+                            Cursor="Hand" Click="OnChatSendClicked" />
                 </Grid>
             </Grid>
         </Grid>

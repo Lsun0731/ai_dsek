@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using AiDesk.App.Services;
+using AiDesk.Core.AI;
 using AiDesk.Core.Clipboard;
 using AiDesk.Core.Diagnostics;
 
@@ -20,9 +21,15 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     /// <summary>搜索结果条目（应用 + 图标 + 所在目录）。</summary>
     public sealed record SearchResult(StartMenuApp App, ImageSource? Icon, string Dir);
 
+    /// <summary>聊天消息（AI 对话 Tab）。</summary>
+    public sealed record ChatMessage(string Role, string Text);
+
     private readonly IReadOnlyList<StartMenuApp> _startMenuApps;
     private readonly Dictionary<string, ImageSource?> _iconCache = new();
     private readonly ClipboardMonitor _clipboard = new();
+    private readonly AIChatClient _ai = new();
+    private readonly List<(string Role, string Content)> _chatHistory = new();
+    private bool _chatBusy;
     private int _clipPage;
     private bool _clipExpanded = true;
 
@@ -63,27 +70,33 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     /// <summary>切到剪贴板 Tab（Ctrl+Alt+V 呼出时）。</summary>
     public void SwitchToClipboardTab()
     {
-        SetTab(search: false);
+        SetTab(clipboard: true);
         RefreshClipboard();
     }
 
-    private void SetTab(bool search)
+    private void SetTab(bool search = false, bool clipboard = false)
     {
         SearchTabBtn.IsChecked = search;
-        ClipTabBtn.IsChecked = !search;
+        ClipTabBtn.IsChecked = clipboard;
+        AITabBtn.IsChecked = !search && !clipboard;
         SearchPage.Visibility = search ? Visibility.Visible : Visibility.Collapsed;
-        ClipPage.Visibility = search ? Visibility.Collapsed : Visibility.Visible;
+        ClipPage.Visibility = clipboard ? Visibility.Visible : Visibility.Collapsed;
+        AIPage.Visibility = !search && !clipboard ? Visibility.Visible : Visibility.Collapsed;
         if (search)
             SearchBox.Focus();
+        else if (!clipboard)
+            ChatInput.Focus();
     }
 
     private void OnSearchTabClick(object sender, RoutedEventArgs e) => SetTab(search: true);
 
     private void OnClipTabClick(object sender, RoutedEventArgs e)
     {
-        SetTab(search: false);
+        SetTab(clipboard: true);
         RefreshClipboard();
     }
+
+    private void OnAITabClick(object sender, RoutedEventArgs e) => SetTab();
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
@@ -245,6 +258,55 @@ public partial class SearchWidgetWindow : WidgetWindowBase
         }
     }
 
+    // ---- AI 对话（文字聊天 + Agent 工具，多轮记忆） ----
+
+    private void OnChatKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+            _ = SendChatAsync();
+    }
+
+    private async void OnChatSendClicked(object sender, RoutedEventArgs e) => await SendChatAsync();
+
+    private async Task SendChatAsync()
+    {
+        var message = ChatInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(message) || _chatBusy)
+            return;
+
+        _chatBusy = true;
+        ChatInput.Clear();
+        AddChatMessage("user", message);
+        _chatHistory.Add(("user", message));
+
+        var settings = AppConfig.Load().AI;
+        var reply = await _ai.ChatWithToolsAsync(settings, message, AgentTools.Tools, AgentTools.Execute, _chatHistory);
+
+        _chatBusy = false;
+        if (reply.IsError)
+        {
+            AddChatMessage("assistant", reply.Error ?? "出错了");
+            Telemetry.Function("Search.Chat", false, 0, $"err={reply.Error}");
+        }
+        else
+        {
+            var content = reply.Content ?? "";
+            AddChatMessage("assistant", content);
+            _chatHistory.Add(("assistant", content));
+            Telemetry.Function("Search.Chat", true, 0, $"len={content.Length}");
+        }
+
+        // 历史过长时裁剪（保留最近 20 条）
+        if (_chatHistory.Count > 20)
+            _chatHistory.RemoveRange(0, _chatHistory.Count - 20);
+    }
+
+    private void AddChatMessage(string role, string text)
+    {
+        ChatList.Items.Add(new ChatMessage(role, text));
+        ChatScroll.ScrollToEnd();
+    }
+
     // ---- AI 对话 ----
 
     private void OnAIButtonClick(object sender, RoutedEventArgs e)
@@ -256,6 +318,7 @@ public partial class SearchWidgetWindow : WidgetWindowBase
     protected override void OnClosed(System.EventArgs e)
     {
         _clipboard.Dispose();
+        _ai.Dispose();
         base.OnClosed(e);
     }
 }

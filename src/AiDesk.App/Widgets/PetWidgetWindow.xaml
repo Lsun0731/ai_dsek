@@ -5,31 +5,12 @@
         Title="桌面宠物" SizeToContent="WidthAndHeight">
     <Grid>
         <StackPanel HorizontalAlignment="Center">
-            <!-- 气泡（显示 AI 回复 / 输入框） -->
+            <!-- 气泡（语音对话状态 / AI 回复） -->
             <Border x:Name="Bubble" Background="#F5FFFFFF" CornerRadius="10" BorderBrush="#14000000"
                     BorderThickness="1" Padding="12,10" Margin="0,0,0,8"
                     MaxWidth="260" Visibility="Collapsed">
-                <StackPanel>
-                    <TextBlock x:Name="BubbleText" Text="你好呀！点我聊天～" FontSize="12"
-                               Foreground="#202124" TextWrapping="Wrap" />
-                    <Grid x:Name="InputPanel" Visibility="Collapsed" Margin="0,6,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBox x:Name="InputBox" FontSize="12" Foreground="#202124"
-                                 Background="#FFFFFFFF" BorderBrush="#14000000" BorderThickness="1"
-                                 Padding="8,5" VerticalContentAlignment="Center"
-                                 KeyDown="OnInputKeyDown" />
-                        <Button Grid.Column="1" Content="🎤" FontSize="12" Margin="6,0,0,0"
-                                Background="#FFEFF1F3" Foreground="#0067C0" BorderThickness="0"
-                                Padding="9,5" Cursor="Hand" Click="OnMicClicked" ToolTip="语音输入（点开始/结束）" />
-                        <Button Grid.Column="2" Content="发送" FontSize="11" Margin="6,0,0,0"
-                                Background="#0067C0" Foreground="White" BorderThickness="0"
-                                Padding="10,5" Cursor="Hand" Click="OnSendClicked" />
-                    </Grid>
-                </StackPanel>
+                <TextBlock x:Name="BubbleText" Text="你好呀！" FontSize="12"
+                           Foreground="#202124" TextWrapping="Wrap" />
             </Border>
 
             <!-- 动漫角色（VPet 动画帧） -->
