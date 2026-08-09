@@ -20,6 +20,15 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // UI 风格预览模式：--preview 只显示预览窗口（供选择风格），不加载主界面
+        if (e.Args.Contains("--preview"))
+        {
+            var preview = new StylePreviewWindow();
+            preview.Show();
+            preview.Closed += (_, _) => Shutdown();
+            return;
+        }
+
         // 生命周期埋点
         Telemetry.Info("App", $"应用启动 v{Environment.Version} OS={Environment.OSVersion.VersionString}");
 

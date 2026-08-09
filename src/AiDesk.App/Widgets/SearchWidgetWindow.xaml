@@ -5,33 +5,29 @@
         Title="搜索" Width="640" SizeToContent="Height">
 
     <widgets:WidgetWindowBase.Resources>
-        <!-- Tab 切换按钮（选中：下划线高亮 + 背景） -->
+        <!-- ═══ Win11 Mica 风格（方角 4-8、米卡浅灰、系统蓝 #0067C0） ═══ -->
+
+        <!-- Tab 按钮：选中 = 浅蓝底 + 蓝字 + SemiBold -->
         <Style x:Key="TabToggleStyle" TargetType="ToggleButton">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#8A94A6" />
-            <Setter Property="FontSize" Value="12.5" />
-            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Foreground" Value="#5F6368" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Grid>
-                            <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8,8,0,0">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                  Margin="{TemplateBinding Padding}" />
-                            </Border>
-                            <Border x:Name="line" Height="2" VerticalAlignment="Bottom"
-                                    Background="#4C7CF3" CornerRadius="1,1,0,0" Visibility="Collapsed" />
-                        </Grid>
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="12,6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#14FFFFFF" />
-                                <Setter TargetName="line" Property="Visibility" Value="Visible" />
-                                <Setter Property="Foreground" Value="#F0F3F8" />
+                                <Setter TargetName="bd" Property="Background" Value="#1A0067C0" />
+                                <Setter Property="Foreground" Value="#0067C0" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="#D8DEE8" />
+                                <Setter TargetName="bd" Property="Background" Value="#12000000" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -39,7 +35,7 @@
             </Setter>
         </Style>
 
-        <!-- 搜索结果行（ListBoxItem：圆角选中高亮） -->
+        <!-- 搜索结果行：选中 = 浅蓝底，悬停 = 浅灰 -->
         <Style TargetType="ListBoxItem">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -48,15 +44,15 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="10" Padding="12,8" Margin="8,2">
+                                CornerRadius="4" Padding="10,7" Margin="4,1">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#264C7CF3" />
+                                <Setter TargetName="bd" Property="Background" Value="#1F0067C0" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#1CFFFFFF" />
+                                <Setter TargetName="bd" Property="Background" Value="#12000000" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -64,22 +60,24 @@
             </Setter>
         </Style>
 
-        <!-- 剪贴板条目（单行卡片，悬停高亮） -->
+        <!-- 剪贴板条目：白色小卡片 -->
         <Style x:Key="ClipItemStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="#FFFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#12000000" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="10" Padding="14,9" Margin="12,3">
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4" Padding="12,8" Margin="6,3">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#22FFFFFF" />
+                                <Setter TargetName="bd" Property="Background" Value="#FFEDEFF2" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -87,27 +85,27 @@
             </Setter>
         </Style>
 
-        <!-- 翻页小按钮 -->
+        <!-- 翻页小按钮：灰字透明 -->
         <Style x:Key="PageNavStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#9AA5B5" />
+            <Setter Property="Foreground" Value="#80868B" />
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="Padding" Value="9,4" />
+            <Setter Property="Padding" Value="8,3" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#22FFFFFF" />
+                                <Setter TargetName="bd" Property="Background" Value="#12000000" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.35" />
+                                <Setter Property="Opacity" Value="0.4" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -115,25 +113,27 @@
             </Setter>
         </Style>
 
-        <!-- 底部操作条按钮 -->
+        <!-- 底部主按钮：实心系统蓝 -->
         <Style x:Key="FooterButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#14FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="#1EFFFFFF" />
+            <Setter Property="Background" Value="#0067C0" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontSize" Value="11.5" />
             <Setter Property="Padding" Value="14,7" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#2EFFFFFF" />
+                                <Setter TargetName="bd" Property="Background" Value="#0057A8" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#004E96" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -141,24 +141,24 @@
             </Setter>
         </Style>
 
-        <!-- 折叠开关按钮（▾/▸） -->
+        <!-- 折叠开关按钮 -->
         <Style x:Key="FoldButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#9AA5B5" />
+            <Setter Property="Foreground" Value="#80868B" />
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Padding" Value="8,3" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                CornerRadius="4" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#22FFFFFF" />
+                                <Setter TargetName="bd" Property="Background" Value="#12000000" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -167,20 +167,19 @@
         </Style>
     </widgets:WidgetWindowBase.Resources>
 
-    <!-- 毛玻璃深色面板 -->
-    <Border CornerRadius="18" BorderBrush="#2EFFFFFF" BorderThickness="1">
+    <!-- Mica 面板：米卡浅灰渐变 + 方角 8 + 浅阴影 -->
+    <Border CornerRadius="8" BorderBrush="#14000000" BorderThickness="1">
         <Border.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#F0182136" Offset="0" />
-                <GradientStop Color="#F00D111C" Offset="1" />
+                <GradientStop Color="#FFF5F5F5" Offset="0" />
+                <GradientStop Color="#FFE9EBEE" Offset="1" />
             </LinearGradientBrush>
         </Border.Background>
         <Border.Effect>
-            <DropShadowEffect Color="#FF000000" Opacity="0.35" BlurRadius="26" ShadowDepth="0" />
+            <DropShadowEffect Color="#FF000000" Opacity="0.18" BlurRadius="18" ShadowDepth="0" />
         </Border.Effect>
 
         <Grid>
-            <!-- 结构：0 Tab栏 / 1 分隔 / 2 搜索页 / 3 剪贴板页（叠加，Visibility 切换） -->
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -189,20 +188,20 @@
             </Grid.RowDefinitions>
 
             <!-- ═══ 顶部 Tab 栏 ═══ -->
-            <Grid Margin="16,10,16,0">
+            <Grid Margin="12,8,12,0">
                 <StackPanel Orientation="Horizontal">
-                    <ToggleButton x:Name="SearchTabBtn" Content="🔍  搜索" Style="{StaticResource TabToggleStyle}"
+                    <ToggleButton x:Name="SearchTabBtn" Content="🔍 搜索" Style="{StaticResource TabToggleStyle}"
                                   IsChecked="True" Click="OnSearchTabClick" />
-                    <ToggleButton x:Name="ClipTabBtn" Content="📋  剪贴板" Style="{StaticResource TabToggleStyle}"
-                                  Click="OnClipTabClick" />
+                    <ToggleButton x:Name="ClipTabBtn" Content="📋 剪贴板" Style="{StaticResource TabToggleStyle}"
+                                  Margin="4,0,0,0" Click="OnClipTabClick" />
                 </StackPanel>
                 <Button Content="✕" Grid.Column="1" HorizontalAlignment="Right"
                         Style="{StaticResource PageNavStyle}" Click="OnCloseClick" />
             </Grid>
-            <Border Grid.Row="1" Height="1" Margin="20,8,20,0" Background="#1EFFFFFF" />
+            <Border Grid.Row="1" Height="1" Margin="16,8,16,0" Background="#1C000000" />
 
             <!-- ═══ 页面一：搜索 ═══ -->
-            <Grid Grid.Row="2" x:Name="SearchPage" Margin="0,6,0,0">
+            <Grid Grid.Row="2" x:Name="SearchPage" Margin="0,4,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -210,19 +209,21 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- 输入区 -->
-                <Grid Margin="22,10,22,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="🔍" FontSize="15" VerticalAlignment="Center" Foreground="#9AA5B5" />
-                    <TextBox x:Name="SearchBox" Grid.Column="1" FontSize="15" FontWeight="SemiBold"
-                             Foreground="#F0F3F8" CaretBrush="#4C7CF3" Background="Transparent"
-                             BorderThickness="0" Margin="12,0,0,0"
-                             TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" />
-                </Grid>
-                <Border Grid.Row="1" Height="1" Margin="22,0" Background="#1EFFFFFF" />
+                <!-- 输入区：白色输入卡片 -->
+                <Border Grid.Row="0" Margin="16,10,16,0" Background="#FFFFFFFF" CornerRadius="4"
+                        BorderBrush="#14000000" BorderThickness="1" Padding="12,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="🔍" FontSize="13" Foreground="#5F6368" VerticalAlignment="Center" />
+                        <TextBox x:Name="SearchBox" Grid.Column="1" FontSize="13.5" FontWeight="Medium"
+                                 Foreground="#202124" CaretBrush="#0067C0" Background="Transparent"
+                                 BorderThickness="0" Margin="10,0,0,0"
+                                 TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" />
+                    </Grid>
+                </Border>
 
                 <!-- 结果区：左列表 + 右预览 -->
                 <Grid Grid.Row="2" Margin="12,10,12,8">
@@ -245,12 +246,12 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Image Source="{Binding Icon}" Width="26" Height="26" Stretch="Uniform"
+                                    <Image Source="{Binding Icon}" Width="24" Height="24" Stretch="Uniform"
                                            RenderOptions.BitmapScalingMode="HighQuality" />
-                                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Name}" FontSize="12.5" Foreground="#E8ECF4"
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontSize="12" Foreground="#202124"
                                                    TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Text="{Binding Dir}" FontSize="10.5" Foreground="#7A8598"
+                                        <TextBlock Text="{Binding Dir}" FontSize="9.5" Foreground="#80868B"
                                                    TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
                                     </StackPanel>
                                 </Grid>
@@ -258,49 +259,48 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <!-- 详情预览 -->
-                    <Border Grid.Column="1" CornerRadius="12" Background="#0DFFFFFF"
-                            BorderBrush="#14FFFFFF" BorderThickness="1" Margin="10,0,0,0"
-                            Padding="16,14" VerticalAlignment="Top" MinHeight="120">
+                    <!-- 详情预览：白色卡片 -->
+                    <Border Grid.Column="1" CornerRadius="4" Background="#FFFFFFFF"
+                            BorderBrush="#12000000" BorderThickness="1" Margin="10,0,0,0"
+                            Padding="14,12" VerticalAlignment="Top" MinHeight="120">
                         <StackPanel x:Name="PreviewPanel">
                             <StackPanel x:Name="PreviewEmpty">
-                                <TextBlock Text="选中应用查看详情" FontSize="11.5" Foreground="#7A8598"
+                                <TextBlock Text="选中应用查看详情" FontSize="11" Foreground="#80868B"
                                            HorizontalAlignment="Center" Margin="0,36,0,0" />
                             </StackPanel>
                             <StackPanel x:Name="PreviewDetail" Visibility="Collapsed">
-                                <Image x:Name="PreviewIcon" Width="56" Height="56" Stretch="Uniform"
+                                <Image x:Name="PreviewIcon" Width="52" Height="52" Stretch="Uniform"
                                        HorizontalAlignment="Center"
                                        RenderOptions.BitmapScalingMode="HighQuality" />
-                                <TextBlock x:Name="PreviewName" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="#F0F3F8" TextAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" Margin="0,10,0,0" />
-                                <TextBlock x:Name="PreviewType" Text="应用程序" FontSize="10.5"
-                                           Foreground="#7A8598" TextAlignment="Center" Margin="0,4,0,0" />
-                                <Border Height="1" Background="#1EFFFFFF" Margin="0,10,0,8" />
-                                <TextBlock Text="位置" FontSize="10" Foreground="#7A8598" />
-                                <TextBlock x:Name="PreviewPath" FontSize="10.5" Foreground="#B8C0CE"
-                                           TextWrapping="Wrap" Margin="0,4,0,0" />
+                                <TextBlock x:Name="PreviewName" FontSize="13.5" FontWeight="SemiBold"
+                                           Foreground="#202124" TextAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" Margin="0,8,0,0" />
+                                <TextBlock x:Name="PreviewType" Text="应用程序" FontSize="9.5"
+                                           Foreground="#80868B" TextAlignment="Center" Margin="0,3,0,0" />
+                                <Border Height="1" Background="#1C000000" Margin="0,8,0,6" />
+                                <TextBlock Text="位置" FontSize="9" Foreground="#80868B" />
+                                <TextBlock x:Name="PreviewPath" FontSize="9.5" Foreground="#5F6368"
+                                           TextWrapping="Wrap" Margin="0,3,0,0" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
                 </Grid>
 
                 <!-- 底部操作条 -->
-                <Grid Grid.Row="3" Margin="16,4,16,14">
+                <Grid Grid.Row="3" Margin="16,4,16,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Button Content="🤖  AI 对话" FontSize="12" Foreground="#D8DEE8"
-                            Style="{StaticResource FooterButtonStyle}" Click="OnAIButtonClick" />
+                    <Button Content="🤖  AI 对话" Style="{StaticResource FooterButtonStyle}" Click="OnAIButtonClick" />
                     <TextBlock Grid.Column="1" Text="Esc 关闭 · ↑↓ 选择 · 回车启动"
-                               FontSize="10.5" Foreground="#7A8598" VerticalAlignment="Center"
+                               FontSize="10" Foreground="#9AA0A6" VerticalAlignment="Center"
                                HorizontalAlignment="Right" Margin="12,0,4,0" />
                 </Grid>
             </Grid>
 
             <!-- ═══ 页面二：剪贴板 ═══ -->
-            <Grid Grid.Row="2" x:Name="ClipPage" Margin="0,6,0,0" Visibility="Collapsed">
+            <Grid Grid.Row="2" x:Name="ClipPage" Margin="0,4,0,0" Visibility="Collapsed">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -309,19 +309,19 @@
                 </Grid.RowDefinitions>
 
                 <!-- 标题栏：折叠 + 标题 | 分页 -->
-                <Grid Margin="20,8,20,4">
+                <Grid Margin="16,8,16,2">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="FoldBtn" Content="▾" Style="{StaticResource FoldButtonStyle}"
                                 Click="OnFoldClick" />
-                        <TextBlock Text="剪贴板历史" FontSize="12" Foreground="#C6CEDC"
+                        <TextBlock Text="剪贴板历史" FontSize="11.5" Foreground="#3C4043"
                                    VerticalAlignment="Center" Margin="2,0,0,0" />
-                        <TextBlock x:Name="ClipCount" FontSize="10.5" Foreground="#7A8598"
+                        <TextBlock x:Name="ClipCount" FontSize="10" Foreground="#9AA0A6"
                                    VerticalAlignment="Center" Margin="10,0,0,0" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <Button x:Name="PrevPageBtn" Content="◀" Style="{StaticResource PageNavStyle}"
                                 Click="OnPrevPage" />
-                        <TextBlock x:Name="PageIndicator" Text="1/1" FontSize="11" Foreground="#9AA5B5"
+                        <TextBlock x:Name="PageIndicator" Text="1/1" FontSize="10.5" Foreground="#80868B"
                                    Margin="8,0" VerticalAlignment="Center" />
                         <Button x:Name="NextPageBtn" Content="▶" Style="{StaticResource PageNavStyle}"
                                 Click="OnNextPage" />
@@ -330,9 +330,9 @@
 
                 <!-- 折叠区：分隔线 + 列表 -->
                 <StackPanel Grid.Row="1" Grid.RowSpan="2" x:Name="ClipFoldArea">
-                    <Border Height="1" Margin="22,0" Background="#1EFFFFFF" />
+                    <Border Height="1" Margin="16,0" Background="#1C000000" />
                     <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled" Margin="0,8,0,0">
+                                  HorizontalScrollBarVisibility="Disabled" Margin="0,6,0,0">
                         <StackPanel>
                             <ItemsControl x:Name="ClipList">
                                 <ItemsControl.ItemTemplate>
@@ -340,31 +340,30 @@
                                         <Button Style="{StaticResource ClipItemStyle}" Tag="{Binding}"
                                                 Click="OnClipItemClick">
                                             <Grid>
-                                                <TextBlock Text="📋" FontSize="12" VerticalAlignment="Center" />
-                                                <TextBlock Text="{Binding}" FontSize="12.5" Foreground="#D8DEE8"
-                                                           TextTrimming="CharacterEllipsis" Margin="30,0,0,0"
+                                                <TextBlock Text="📋" FontSize="11" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding}" FontSize="11.5" Foreground="#3C4043"
+                                                           TextTrimming="CharacterEllipsis" Margin="28,0,0,0"
                                                            VerticalAlignment="Center" />
                                             </Grid>
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <TextBlock x:Name="ClipEmpty" Text="（暂无剪贴板历史）" FontSize="12.5"
-                                       Foreground="#7A8598" Margin="24,10,0,16" Visibility="Collapsed" />
+                            <TextBlock x:Name="ClipEmpty" Text="（暂无剪贴板历史）" FontSize="11.5"
+                                       Foreground="#9AA0A6" Margin="22,8,0,12" Visibility="Collapsed" />
                         </StackPanel>
                     </ScrollViewer>
                 </StackPanel>
 
                 <!-- 底部操作条 -->
-                <Grid Grid.Row="3" Margin="16,8,16,14">
+                <Grid Grid.Row="3" Margin="16,8,16,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Button Content="🤖  AI 对话" FontSize="12" Foreground="#D8DEE8"
-                            Style="{StaticResource FooterButtonStyle}" Click="OnAIButtonClick" />
+                    <Button Content="🤖  AI 对话" Style="{StaticResource FooterButtonStyle}" Click="OnAIButtonClick" />
                     <TextBlock Grid.Column="1" Text="点击条目复制 · Esc 关闭"
-                               FontSize="10.5" Foreground="#7A8598" VerticalAlignment="Center"
+                               FontSize="10" Foreground="#9AA0A6" VerticalAlignment="Center"
                                HorizontalAlignment="Right" Margin="12,0,4,0" />
                 </Grid>
             </Grid>
